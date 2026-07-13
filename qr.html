@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>위치별 QR코드 생성기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #f4f4f8;
+    color: #1a1a2e;
+    padding: 30px 20px;
+  }
+  .top {
+    max-width: 800px;
+    margin: 0 auto 30px;
+    text-align: center;
+  }
+  h1 { font-size: 24px; font-weight: 900; margin-bottom: 6px; }
+  .desc { font-size: 13px; color: #666; line-height: 1.7; }
+  .url-box {
+    max-width: 600px;
+    margin: 20px auto 0;
+    display: flex;
+    gap: 8px;
+  }
+  .url-box input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: 'Noto Sans KR', sans-serif;
+    outline: none;
+  }
+  .url-box input:focus { border-color: #e94560; }
+  .url-box button {
+    background: #e94560;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-print {
+    margin-top: 12px;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .grid {
+    max-width: 800px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 20px;
+  }
+  .qr-card {
+    background: white;
+    border: 2px solid #1a1a2e;
+    border-radius: 16px;
+    padding: 24px 16px;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+  .qr-card .icon { font-size: 32px; margin-bottom: 8px; }
+  .qr-card .name { font-size: 15px; font-weight: 900; margin-bottom: 4px; }
+  .qr-card .hint { font-size: 10px; color: #888; margin-bottom: 14px; }
+  .qr-img { display: flex; justify-content: center; }
+  .qr-img img, .qr-img canvas { border: 8px solid white; }
+  .qr-card .footer { font-size: 10px; color: #aaa; margin-top: 12px; letter-spacing: 1px; }
+
+  @media print {
+    .top { display: none; }
+    body { background: white; padding: 10px; }
+    .grid { gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>📍 위치별 QR코드 생성기</h1>
+  <div class="desc">
+    GitHub Pages 배포 주소를 입력하면 위치별 QR코드가 자동 생성됩니다.<br>
+    각 QR을 인쇄해서 해당 위치에 부착하면, 직원이 스캔 시 <b>위치가 자동 선택</b>됩니다.
+  </div>
+  <div class="url-box">
+    <input type="text" id="baseUrl" placeholder="예: https://아이디.github.io/facility-system/index.html" />
+    <button onclick="generate()">QR 생성</button>
+  </div>
+  <button class="btn-print" onclick="window.print()">🖨️ 전체 인쇄</button>
+</div>
+
+<div class="grid" id="qrGrid"></div>
+
+<script>
+  const LOCATIONS = [
+    { icon: '🏭', name: 'MSG정제결정동 화장실', loc: 'MSG정제결정동 화장실' },
+    { icon: '🌿', name: '옥외 화장실',          loc: '옥외 화장실' },
+    { icon: '🔧', name: '정비계 화장실',        loc: '정비계 화장실' },
+    { icon: '🏢', name: '구사무동 화장실',      loc: '구사무동 화장실' },
+    { icon: '🏬', name: '사무동 화장실',        loc: '사무동 화장실' },
+    { icon: '🛁', name: '목욕탕',               loc: '목욕탕' },
+    { icon: '💪', name: '헬스장',               loc: '헬스장' },
+    { icon: '🍽️', name: '구내식당',             loc: '구내식당' },
+    { icon: '🚻', name: '공용 (전체 접수)',      loc: '' }
+  ];
+
+  function generate() {
+    const base = document.getElementById('baseUrl').value.trim();
+    if (!base) { alert('배포 주소를 먼저 입력해주세요!'); return; }
+
+    const grid = document.getElementById('qrGrid');
+    grid.innerHTML = '';
+
+    LOCATIONS.forEach(item => {
+      const url = item.loc ? base + '?loc=' + encodeURIComponent(item.loc) : base;
+
+      const card = document.createElement('div');
+      card.className = 'qr-card';
+      card.innerHTML = `
+        <div class="icon">${item.icon}</div>
+        <div class="name">${item.name}</div>
+        <div class="hint">불편사항이 있으면 스캔해주세요</div>
+        <div class="qr-img" id="qr-${item.name.replace(/\s/g,'')}"></div>
+        <div class="footer">시설물 민원 접수 시스템</div>
+      `;
+      grid.appendChild(card);
+
+      new QRCode(document.getElementById('qr-' + item.name.replace(/\s/g,'')), {
+        text: url,
+        width: 160,
+        height: 160,
+        colorDark: '#1a1a2e',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    });
+  }
+</script>
+</body>
+</html>

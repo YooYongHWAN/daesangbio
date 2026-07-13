@@ -44,20 +44,14 @@
     display: inline-block;
     background: var(--accent);
     color: white;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 10px; font-weight: 700;
     letter-spacing: 2px;
     padding: 3px 10px;
     border-radius: 20px;
     margin-bottom: 10px;
     text-transform: uppercase;
   }
-  .header h1 {
-    font-weight: 900;
-    font-size: 24px;
-    line-height: 1.2;
-    letter-spacing: -0.5px;
-  }
+  .header h1 { font-weight: 900; font-size: 24px; line-height: 1.2; letter-spacing: -0.5px; }
   .header h1 span { color: var(--accent); }
   .header p { margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 300; }
 
@@ -68,8 +62,7 @@
     margin: 14px 20px 0;
     border-radius: 12px;
     padding: 12px 16px;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 13px; font-weight: 600;
   }
   .qr-banner span { color: var(--success); }
 
@@ -154,6 +147,15 @@
     background: rgba(136,146,164,0.2); color: var(--muted);
     padding: 2px 7px; border-radius: 10px; margin-left: 6px;
     vertical-align: middle; font-weight: 600; letter-spacing: 1px;
+  }
+  .note-box {
+    background: rgba(245,166,35,0.1);
+    border: 1.5px solid var(--accent2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 16px;
   }
 
   .toggle-row {
@@ -329,72 +331,62 @@
 <div class="section active" id="section-1">
   <div class="section-label">STEP 01</div>
   <div class="section-title">접수 유형을 선택해주세요</div>
-  <div class="section-desc">어떤 시설에 불편사항이 있으신가요?</div>
+  <div class="section-desc">어떤 항목에 대한 접수인가요?</div>
 
-  <div class="options-grid">
-    <div class="option-card" onclick="selectType('화장실')" id="type-화장실">
-      <div class="icon">🚻</div><div class="label">화장실</div><div class="sub">위치·칸 선택 가능</div>
-    </div>
-    <div class="option-card" onclick="selectType('목욕탕')" id="type-목욕탕">
-      <div class="icon">🛁</div><div class="label">목욕탕</div><div class="sub">시설 이용 불편</div>
-    </div>
-    <div class="option-card" onclick="selectType('헬스장')" id="type-헬스장">
-      <div class="icon">💪</div><div class="label">헬스장</div><div class="sub">기구·시설 불편</div>
-    </div>
-    <div class="option-card" onclick="selectType('도로')" id="type-도로">
-      <div class="icon">🛣️</div><div class="label">도로</div><div class="sub">구내 도로·주차장</div>
-    </div>
-    <div class="option-card" onclick="selectType('구내식당')" id="type-구내식당">
-      <div class="icon">🍽️</div><div class="label">구내식당</div><div class="sub">음식·위생·시설</div>
-    </div>
-    <div class="option-card" onclick="selectType('기타')" id="type-기타">
-      <div class="icon">🏢</div><div class="label">기타 시설</div><div class="sub">직접 입력</div>
-    </div>
-  </div>
+  <div class="options-grid" id="typeGrid"></div>
 
   <div class="nav-btns">
     <button class="btn-next" id="btn1" onclick="goNext(2)" disabled>다음 단계 →</button>
   </div>
 </div>
 
-<!-- SECTION 2: 세부 위치 -->
+<!-- SECTION 2: 세부 정보 -->
 <div class="section" id="section-2">
   <div class="section-label">STEP 02</div>
   <div class="section-title" id="s2-title">세부 위치 선택</div>
   <div class="section-desc" id="s2-desc">구체적인 위치를 선택해주세요</div>
 
-  <div id="toilet-section">
+  <!-- 화장실 -->
+  <div id="toilet-section" style="display:none">
     <div class="field-group">
       <div class="field-label">화장실 위치</div>
-      <div class="options-grid single">
-        <div class="option-card" onclick="selectLocation('MSG정제결정동 화장실')" id="loc-MSG정제결정동 화장실"><div class="label">🏭 MSG정제결정동 화장실</div></div>
-        <div class="option-card" onclick="selectLocation('옥외 화장실')" id="loc-옥외 화장실"><div class="label">🌿 옥외 화장실</div></div>
-        <div class="option-card" onclick="selectLocation('정비계 화장실')" id="loc-정비계 화장실"><div class="label">🔧 정비계 화장실</div></div>
-        <div class="option-card" onclick="selectLocation('구사무동 화장실')" id="loc-구사무동 화장실"><div class="label">🏢 구사무동 화장실</div></div>
-        <div class="option-card" onclick="selectLocation('사무동 화장실')" id="loc-사무동 화장실"><div class="label">🏬 사무동 화장실</div></div>
-      </div>
+      <div class="options-grid single" id="locGrid"></div>
     </div>
-
     <div class="field-group" id="floor-group" style="display:none">
       <div class="field-label">층수</div>
-      <div class="options-grid">
-        <div class="option-card" onclick="selectFloor('1층')" id="fl-1층"><div class="label">1층</div></div>
-        <div class="option-card" onclick="selectFloor('2층')" id="fl-2층"><div class="label">2층</div></div>
-        <div class="option-card" onclick="selectFloor('3층')" id="fl-3층"><div class="label">3층</div></div>
-        <div class="option-card" onclick="selectFloor('해당없음')" id="fl-해당없음"><div class="label">해당없음</div></div>
-      </div>
+      <div class="options-grid" id="floorGrid"></div>
     </div>
-
+    <div class="field-group" id="room-group" style="display:none">
+      <div class="field-label">화장실 구분</div>
+      <div class="options-grid" id="roomGrid"></div>
+    </div>
     <div class="field-group" id="stall-group" style="display:none">
       <div class="field-label">칸 번호 <span class="optional-tag">OPTIONAL</span></div>
       <input type="text" id="stallInput" placeholder="예: 2번째 칸, 맨 끝 칸" />
     </div>
   </div>
 
+  <!-- 근무복 -->
+  <div id="workwear-section" style="display:none">
+    <div class="field-group">
+      <div class="field-label">근무복 분류</div>
+      <div class="options-grid" id="wwGrid"></div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">사이즈</div>
+      <input type="text" id="wwSize" placeholder="예: 100, 105 / 하의: 30, 32인치" />
+    </div>
+    <div class="field-group">
+      <div class="field-label">개수</div>
+      <input type="text" id="wwCount" inputmode="numeric" placeholder="예: 2" />
+    </div>
+  </div>
+
+  <!-- 기타 시설 -->
   <div id="other-section" style="display:none">
     <div class="field-group">
       <div class="field-label">구체적 위치</div>
-      <input type="text" id="otherLocation" placeholder="예: 헬스장 런닝머신 앞, 정문 앞 도로" />
+      <input type="text" id="otherLocation" placeholder="" />
     </div>
   </div>
 
@@ -404,11 +396,11 @@
   </div>
 </div>
 
-<!-- SECTION 3: 문제 유형 -->
+<!-- SECTION 3: 문제 유형 / 추가 정보 -->
 <div class="section" id="section-3">
   <div class="section-label">STEP 03</div>
-  <div class="section-title">어떤 문제인가요?</div>
-  <div class="section-desc">해당하는 항목을 모두 선택해주세요 (복수 선택 가능)</div>
+  <div class="section-title" id="s3-title">어떤 문제인가요?</div>
+  <div class="section-desc" id="s3-desc">해당하는 항목을 모두 선택해주세요 (복수 선택 가능)</div>
 
   <div class="check-list" id="problemList"></div>
 
@@ -416,7 +408,7 @@
 
   <div class="field-group">
     <div class="field-label">상세 내용 <span class="optional-tag">OPTIONAL</span></div>
-    <textarea id="detailText" placeholder="추가로 설명할 내용을 자유롭게 적어주세요&#10;예: 어제부터 물이 안 내려가고 있어요"></textarea>
+    <textarea id="detailText" placeholder="추가로 설명할 내용을 자유롭게 적어주세요"></textarea>
   </div>
 
   <div class="field-group">
@@ -444,6 +436,10 @@
 
   <div class="summary-card" id="summaryCard"></div>
 
+  <div class="note-box" id="wwNote" style="display:none">
+    👕 근무복 수령을 위해 <b>부서와 이름</b>을 꼭 입력해주세요!
+  </div>
+
   <div class="toggle-row" onclick="toggleAnon()" id="anonToggle">
     <div class="toggle-info">
       <div class="t-title">🙈 익명으로 접수하기</div>
@@ -469,13 +465,13 @@
 <div class="section" id="section-done">
   <div class="done-icon">✓</div>
   <div class="done-title">접수 완료!</div>
-  <div class="done-sub">불편사항이 정상적으로 접수되었습니다.<br>처리 결과는 카카오 채널에서 공지해드려요 📢</div>
+  <div class="done-sub">정상적으로 접수되었습니다.<br>처리 결과는 카카오 채널에서 공지해드려요 📢</div>
   <div class="done-receipt">
     <div class="receipt-label">접수 번호</div>
     <div class="receipt-num" id="receiptNum">--</div>
     <div class="receipt-info" id="receiptInfo"></div>
   </div>
-  <button class="btn-new" onclick="resetForm()">+ 새 불편사항 접수하기</button>
+  <button class="btn-new" onclick="resetForm()">+ 새로 접수하기</button>
 </div>
 
 <script>
@@ -484,65 +480,256 @@
      ═══════════════════════════════════════════ */
   const API_URL = "https://script.google.com/macros/s/AKfycbzrT6NAdr25QFIQunoPyxxWFFAn8jtAhFXDpx886e5KY-RS4EVOZW7vBjgQoHG9K1OoUg/exec";
 
-  const TOILET_LOCATIONS = ['MSG정제결정동 화장실','옥외 화장실','정비계 화장실','구사무동 화장실','사무동 화장실'];
-
-  const state = {
-    type: '', location: '', floor: '', stall: '',
-    otherLocation: '', problems: [], detail: '',
-    photoBase64: '', photoName: '',
-    anonymous: true, contact: ''
+  /* ═══════════════════════════════════════════
+     화장실 위치별 구조 설정
+     - floors: 층 선택
+     - rooms: 남/여 등 구분 선택
+     - floorRooms: 층마다 구분이 다른 경우
+     ═══════════════════════════════════════════ */
+  const TOILET_CONFIG = {
+    'MSG정제결정동 화장실': { icon: '🏭', floors: ['1층','2층','3층','해당없음'] },
+    '옥외화장실(냉동콤프)': { icon: '🌿', rooms: ['남자화장실','여자화장실'] },
+    '정비계 화장실':        { icon: '🔧' },
+    '구사무동 화장실':      { icon: '🏢', floors: ['1층','2층'] },
+    '사무동 화장실':        { icon: '🏬', floors: ['1층','2층','3층','해당없음'] },
+    '복지동 화장실':        { icon: '🏥', floorRooms: {
+        '1층': ['남자화장실','여자화장실'],
+        '2층': ['임직원 화장실','협력업체 화장실','여자탈의실 화장실'],
+        '3층': ['남자화장실']
+    }}
   };
+
+  /* 접수 유형 정의 */
+  const TYPES = [
+    { id: '화장실',   icon: '🚻', sub: '위치·칸 선택 가능' },
+    { id: '목욕탕',   icon: '🛁', sub: '시설 이용 불편' },
+    { id: '헬스장',   icon: '💪', sub: '기구·시설 불편' },
+    { id: '도로',     icon: '🛣️', sub: '구내 도로·주차장' },
+    { id: '구내식당', icon: '🍽️', sub: '음식·위생·시설' },
+    { id: '휴게시설', icon: '☕', sub: '정수기·냉난방 등' },
+    { id: '통근버스', icon: '🚌', sub: '노선·차량·시간' },
+    { id: '근무복',   icon: '👕', sub: '동계·하계 요청' },
+    { id: '기타',     icon: '🏢', sub: '직접 입력' }
+  ];
+
+  const WORKWEAR_ITEMS = [
+    '동계 상의','동계 하의','동계 패딩상의','동계 패딩조끼',
+    '동계 긴팔(검은색)','하계 상의','하계 하의','하계 반팔(검은색)'
+  ];
 
   const toiletProblems = [
     '🚽 변기 고장·막힘','🔒 문 잠금장치 불량','💨 악취','🧹 청결 불량',
     '💡 조명 불량','💧 물 안 내려감','🚿 세면대 고장','🪣 휴지 없음','✏️ 기타'
   ];
-  const facilityProblems = {
-    '목욕탕': ['🚿 샤워시설 고장','🌡️ 온수 문제','🧹 청결 불량','💡 조명 불량','🔒 락커 불량','✏️ 기타'],
-    '헬스장': ['🏋️ 운동기구 고장','📺 TV/음향 불량','💡 조명 불량','🌡️ 냉난방 불량','🧹 청결 불량','✏️ 기타'],
-    '도로': ['🕳️ 도로 파손·균열','⚠️ 안전 위험','🚧 배수 불량','🚗 주차 문제','💡 조명 불량','✏️ 기타'],
-    '구내식당': ['🍽️ 음식 품질 문제','🧹 위생·청결','🍽️ 식기 불량','💡 환경·시설','⏰ 배식 시간','✏️ 기타'],
-    '기타': ['🔧 시설물 고장','🧹 청결 불량','⚠️ 안전 위험','💡 조명 불량','✏️ 기타']
+
+  const FACILITY_FLOWS = {
+    '목욕탕':   { ph: '예: 남탕 샤워부스, 탈의실', problems: ['🚿 샤워시설 고장','🌡️ 온수 문제','🧹 청결 불량','💡 조명 불량','🔒 락커 불량','✏️ 기타'] },
+    '헬스장':   { ph: '예: 런닝머신 2번, 샤워실', problems: ['🏋️ 운동기구 고장','📺 TV/음향 불량','💡 조명 불량','🌡️ 냉난방 불량','🧹 청결 불량','✏️ 기타'] },
+    '도로':     { ph: '예: 정문 앞, 주차장 입구', problems: ['🕳️ 도로 파손·균열','⚠️ 안전 위험','🚧 배수 불량','🚗 주차 문제','💡 조명 불량','✏️ 기타'] },
+    '구내식당': { ph: '예: 배식대, 홀 좌석', problems: ['🍽️ 음식 품질 문제','🧹 위생·청결','🍽️ 식기 불량','💡 환경·시설','⏰ 배식 시간','✏️ 기타'] },
+    '휴게시설': { ph: '예: 포장동 휴게실, 2층 휴게실', problems: ['💧 정수기 고장','🌡️ 정수기 온수/냉수 문제','🥤 세모급컵(종이컵) 없음','🧼 정수기 위생·청소 필요','❄️ 냉방 불량','🔥 난방 불량','🧹 청결 불량','✏️ 기타'] },
+    '통근버스': { ph: '예: 1호차, 군산 시내 노선', problems: ['⏰ 시간 미준수(지연·조기출발)','🚏 정류장·노선 관련','🚌 차량 노후·고장','🌡️ 냉난방 불량','🧹 청결 불량','🪑 좌석 부족','✏️ 기타'] },
+    '기타':     { ph: '예: 창고 앞, 흡연장', problems: ['🔧 시설물 고장','🧹 청결 불량','⚠️ 안전 위험','💡 조명 불량','✏️ 기타'] }
   };
+
+  const state = {
+    type: '', location: '', floor: '', room: '', stall: '',
+    otherLocation: '', problems: [], detail: '',
+    wwCategory: '', wwSize: '', wwCount: '',
+    photoBase64: '', photoName: '',
+    anonymous: true, contact: ''
+  };
+
+  /* ───────── 유형 카드 렌더링 ───────── */
+  function buildTypeGrid() {
+    const grid = document.getElementById('typeGrid');
+    grid.innerHTML = '';
+    TYPES.forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'option-card';
+      div.id = 'type-' + t.id;
+      div.innerHTML = `<div class="icon">${t.icon}</div><div class="label">${t.id === '근무복' ? '근무복 요청' : t.id}</div><div class="sub">${t.sub}</div>`;
+      div.onclick = () => selectType(t.id);
+      grid.appendChild(div);
+    });
+  }
 
   function selectType(t) {
     state.type = t;
-    state.location = '';
-    state.floor = '';
-    document.querySelectorAll('[id^="type-"]').forEach(el => el.classList.remove('selected'));
+    state.location = ''; state.floor = ''; state.room = ''; state.wwCategory = '';
+    document.querySelectorAll('#typeGrid .option-card').forEach(el => el.classList.remove('selected'));
     document.getElementById('type-' + t).classList.add('selected');
     document.getElementById('btn1').disabled = false;
   }
 
+  /* ───────── 화장실 위치/층/구분 렌더링 ───────── */
+  function buildLocGrid() {
+    const grid = document.getElementById('locGrid');
+    grid.innerHTML = '';
+    Object.keys(TOILET_CONFIG).forEach(name => {
+      const div = document.createElement('div');
+      div.className = 'option-card';
+      div.dataset.loc = name;
+      div.innerHTML = `<div class="label">${TOILET_CONFIG[name].icon} ${name}</div>`;
+      div.onclick = () => selectLocation(name);
+      grid.appendChild(div);
+    });
+  }
+
   function selectLocation(l) {
     state.location = l;
-    document.querySelectorAll('[id^="loc-"]').forEach(el => el.classList.remove('selected'));
-    document.getElementById('loc-' + l).classList.add('selected');
-    document.getElementById('floor-group').style.display = 'block';
+    state.floor = ''; state.room = '';
+    document.querySelectorAll('#locGrid .option-card').forEach(el =>
+      el.classList.toggle('selected', el.dataset.loc === l));
+
+    const cfg = TOILET_CONFIG[l] || {};
+    document.getElementById('floor-group').style.display = 'none';
+    document.getElementById('room-group').style.display = 'none';
+
+    if (cfg.floors) renderFloorGrid(cfg.floors);
+    if (cfg.floorRooms) renderFloorGrid(Object.keys(cfg.floorRooms));
+    if (cfg.rooms) renderRoomGrid(cfg.rooms);
+
     document.getElementById('stall-group').style.display = 'block';
     checkSection2();
   }
 
+  function renderFloorGrid(floors) {
+    const grid = document.getElementById('floorGrid');
+    grid.innerHTML = '';
+    floors.forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'option-card';
+      div.dataset.floor = f;
+      div.innerHTML = `<div class="label">${f}</div>`;
+      div.onclick = () => selectFloor(f);
+      grid.appendChild(div);
+    });
+    document.getElementById('floor-group').style.display = 'block';
+  }
+
   function selectFloor(f) {
     state.floor = f;
-    document.querySelectorAll('[id^="fl-"]').forEach(el => el.classList.remove('selected'));
-    document.getElementById('fl-' + f).classList.add('selected');
+    state.room = '';
+    document.querySelectorAll('#floorGrid .option-card').forEach(el =>
+      el.classList.toggle('selected', el.dataset.floor === f));
+
+    const cfg = TOILET_CONFIG[state.location] || {};
+    if (cfg.floorRooms) {
+      renderRoomGrid(cfg.floorRooms[f] || []);
+    }
     checkSection2();
   }
 
-  function checkSection2() {
-    if (state.type === '화장실') {
-      document.getElementById('btn2').disabled = !state.location;
-    } else {
-      document.getElementById('btn2').disabled = false;
-    }
+  function renderRoomGrid(rooms) {
+    const grid = document.getElementById('roomGrid');
+    grid.innerHTML = '';
+    rooms.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'option-card';
+      div.dataset.room = r;
+      div.innerHTML = `<div class="label">${r.includes('여자') ? '🚺' : r.includes('남자') ? '🚹' : '🚻'} ${r}</div>`;
+      div.onclick = () => selectRoom(r);
+      grid.appendChild(div);
+    });
+    document.getElementById('room-group').style.display = rooms.length ? 'block' : 'none';
   }
 
-  function buildProblemList() {
-    state.problems = [];
+  function selectRoom(r) {
+    state.room = r;
+    document.querySelectorAll('#roomGrid .option-card').forEach(el =>
+      el.classList.toggle('selected', el.dataset.room === r));
+    checkSection2();
+  }
+
+  /* ───────── 근무복 분류 렌더링 ───────── */
+  function buildWwGrid() {
+    const grid = document.getElementById('wwGrid');
+    grid.innerHTML = '';
+    WORKWEAR_ITEMS.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'option-card';
+      div.dataset.ww = item;
+      div.innerHTML = `<div class="label">${item.startsWith('동계') ? '❄️' : '☀️'} ${item}</div>`;
+      div.onclick = () => {
+        state.wwCategory = item;
+        document.querySelectorAll('#wwGrid .option-card').forEach(el =>
+          el.classList.toggle('selected', el.dataset.ww === item));
+        checkSection2();
+      };
+      grid.appendChild(div);
+    });
+  }
+
+  /* ───────── 2단계 유효성 검사 ───────── */
+  function checkSection2() {
+    let ok = false;
+    if (state.type === '화장실') {
+      const cfg = TOILET_CONFIG[state.location] || {};
+      ok = !!state.location;
+      if (cfg.rooms) ok = ok && !!state.room;
+      if (cfg.floorRooms) ok = ok && !!state.floor && !!state.room;
+    } else if (state.type === '근무복') {
+      ok = !!state.wwCategory
+        && document.getElementById('wwSize').value.trim() !== ''
+        && document.getElementById('wwCount').value.trim() !== '';
+    } else {
+      ok = document.getElementById('otherLocation').value.trim() !== '';
+    }
+    document.getElementById('btn2').disabled = !ok;
+  }
+
+  /* ───────── 2단계 화면 세팅 ───────── */
+  function setupSection2() {
+    document.getElementById('toilet-section').style.display = 'none';
+    document.getElementById('workwear-section').style.display = 'none';
+    document.getElementById('other-section').style.display = 'none';
+
+    if (state.type === '화장실') {
+      document.getElementById('toilet-section').style.display = 'block';
+      document.getElementById('s2-title').textContent = '화장실 위치 선택';
+      document.getElementById('s2-desc').textContent = '화장실 위치와 세부 구분을 선택해주세요';
+      if (!state.location) {
+        document.getElementById('floor-group').style.display = 'none';
+        document.getElementById('room-group').style.display = 'none';
+        document.getElementById('stall-group').style.display = 'none';
+      }
+    } else if (state.type === '근무복') {
+      document.getElementById('workwear-section').style.display = 'block';
+      document.getElementById('s2-title').textContent = '근무복 요청 정보';
+      document.getElementById('s2-desc').textContent = '분류, 사이즈, 개수를 입력해주세요';
+    } else {
+      document.getElementById('other-section').style.display = 'block';
+      document.getElementById('s2-title').textContent = '구체적 위치 입력';
+      document.getElementById('s2-desc').textContent = '어느 곳에서 발생한 문제인지 알려주세요';
+      document.getElementById('otherLocation').placeholder = (FACILITY_FLOWS[state.type] || FACILITY_FLOWS['기타']).ph;
+    }
+    checkSection2();
+  }
+
+  /* ───────── 3단계: 문제 유형 ───────── */
+  function setupSection3() {
     const list = document.getElementById('problemList');
+    state.problems = [];
+
+    if (state.type === '근무복') {
+      // 근무복은 문제 선택 없이 추가정보만
+      list.innerHTML = '';
+      list.style.display = 'none';
+      document.getElementById('s3-title').textContent = '추가 정보 입력';
+      document.getElementById('s3-desc').textContent = '요청 관련 메모나 사진이 있다면 첨부해주세요 (선택)';
+      document.getElementById('detailText').placeholder = '예: 기존 근무복이 낡아서 교체 요청드립니다';
+      document.getElementById('btn3').disabled = false;
+      return;
+    }
+
+    list.style.display = 'flex';
+    document.getElementById('s3-title').textContent = '어떤 문제인가요?';
+    document.getElementById('s3-desc').textContent = '해당하는 항목을 모두 선택해주세요 (복수 선택 가능)';
+    document.getElementById('detailText').placeholder = '추가로 설명할 내용을 자유롭게 적어주세요\n예: 어제부터 물이 안 내려가고 있어요';
+
     list.innerHTML = '';
-    const items = state.type === '화장실' ? toiletProblems : (facilityProblems[state.type] || facilityProblems['기타']);
+    const items = state.type === '화장실' ? toiletProblems : (FACILITY_FLOWS[state.type] || FACILITY_FLOWS['기타']).problems;
     items.forEach(p => {
       const div = document.createElement('div');
       div.className = 'check-item';
@@ -558,17 +745,36 @@
     document.getElementById('btn3').disabled = true;
   }
 
+  /* ───────── 4단계: 요약 ───────── */
   function buildSummary() {
     const card = document.getElementById('summaryCard');
-    const rows = [
-      ['접수 유형', state.type],
-      state.type === '화장실' ? ['화장실 위치', state.location] : ['시설 위치', state.otherLocation || state.location || '-'],
-      state.type === '화장실' && state.floor ? ['층수', state.floor] : null,
-      state.type === '화장실' && document.getElementById('stallInput').value ? ['칸 번호', document.getElementById('stallInput').value] : null,
-      ['문제 유형', state.problems.join(', ')],
-      document.getElementById('detailText').value ? ['상세 내용', document.getElementById('detailText').value] : null,
-      state.photoBase64 ? ['사진', '📎 첨부됨'] : null,
-    ].filter(Boolean);
+    let rows = [];
+
+    if (state.type === '근무복') {
+      rows = [
+        ['접수 유형', '근무복 요청'],
+        ['분류', state.wwCategory],
+        ['사이즈', state.wwSize],
+        ['개수', state.wwCount + '개'],
+        document.getElementById('detailText').value ? ['메모', document.getElementById('detailText').value] : null,
+        state.photoBase64 ? ['사진', '📎 첨부됨'] : null,
+      ].filter(Boolean);
+      // 근무복은 수령을 위해 실명 접수 유도
+      document.getElementById('wwNote').style.display = 'block';
+      if (state.anonymous) toggleAnon();
+    } else {
+      document.getElementById('wwNote').style.display = 'none';
+      rows = [
+        ['접수 유형', state.type],
+        state.type === '화장실' ? ['화장실 위치', state.location] : ['위치', state.otherLocation || '-'],
+        state.type === '화장실' && state.floor ? ['층수', state.floor] : null,
+        state.type === '화장실' && state.room ? ['구분', state.room] : null,
+        state.type === '화장실' && state.stall ? ['칸 번호', state.stall] : null,
+        ['문제 유형', state.problems.join(', ')],
+        document.getElementById('detailText').value ? ['상세 내용', document.getElementById('detailText').value] : null,
+        state.photoBase64 ? ['사진', '📎 첨부됨'] : null,
+      ].filter(Boolean);
+    }
 
     card.innerHTML = rows.map(([k, v]) =>
       `<div class="summary-row"><div class="summary-key">${k}</div><div class="summary-val ${k==='접수 유형'?'accent':''}">${v}</div></div>`
@@ -581,7 +787,7 @@
     document.getElementById('contactSection').style.display = state.anonymous ? 'none' : 'block';
   }
 
-  /* 사진 → 리사이즈(최대 1024px) → base64 (전송 용량 절약) */
+  /* ───────── 사진 처리 ───────── */
   function onFileChange() {
     const f = document.getElementById('photoInput').files[0];
     if (!f) return;
@@ -613,7 +819,8 @@
     reader.readAsDataURL(f);
   }
 
-  const progressSteps = ['유형 선택', '위치 선택', '문제 선택', '최종 확인'];
+  /* ───────── 진행 표시 ───────── */
+  const progressSteps = ['유형 선택', '세부 정보', '내용 입력', '최종 확인'];
   const progressPcts = [10, 40, 70, 95];
 
   function updateProgress(step) {
@@ -630,33 +837,16 @@
   function goNext(to) {
     if (to === 2) setupSection2();
     if (to === 3) {
-      state.stall = document.getElementById('stallInput').value;
-      state.otherLocation = document.getElementById('otherLocation').value;
-      buildProblemList();
+      state.stall = document.getElementById('stallInput').value.trim();
+      state.otherLocation = document.getElementById('otherLocation').value.trim();
+      state.wwSize = document.getElementById('wwSize').value.trim();
+      state.wwCount = document.getElementById('wwCount').value.trim();
+      setupSection3();
     }
     if (to === 4) buildSummary();
     showSection(to);
     updateProgress(to);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function setupSection2() {
-    if (state.type === '화장실') {
-      document.getElementById('toilet-section').style.display = 'block';
-      document.getElementById('other-section').style.display = 'none';
-      document.getElementById('s2-title').textContent = '화장실 위치 선택';
-      document.getElementById('s2-desc').textContent = '화장실 위치, 층수, 칸 번호를 선택해주세요';
-      if (!state.location) {
-        document.getElementById('floor-group').style.display = 'none';
-        document.getElementById('stall-group').style.display = 'none';
-      }
-    } else {
-      document.getElementById('toilet-section').style.display = 'none';
-      document.getElementById('other-section').style.display = 'block';
-      document.getElementById('s2-title').textContent = '구체적 위치 입력';
-      document.getElementById('s2-desc').textContent = '어느 곳에서 발생한 문제인지 알려주세요';
-      document.getElementById('btn2').disabled = false;
-    }
   }
 
   function goBack(to) {
@@ -677,7 +867,17 @@
     return d + '-' + r;
   }
 
+  /* ───────── 제출 ───────── */
   async function submitForm() {
+    // 근무복은 연락처 필수
+    if (state.type === '근무복') {
+      const c = document.getElementById('contactInput').value.trim();
+      if (!c) {
+        alert('근무복 수령을 위해 부서와 이름을 입력해주세요!');
+        return;
+      }
+    }
+
     const num = generateReceiptNum();
     const now = new Date();
     const timeStr = now.toLocaleDateString('ko-KR') + ' ' + now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
@@ -685,6 +885,34 @@
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ 저장 중...';
+
+    // 유형별 데이터 매핑
+    let payload;
+    if (state.type === '근무복') {
+      payload = {
+        type: '근무복',
+        location: state.wwCategory,
+        floor: '',
+        stall: '',
+        problem: '사이즈: ' + state.wwSize + ' / 수량: ' + state.wwCount + '개'
+      };
+    } else if (state.type === '화장실') {
+      payload = {
+        type: '화장실',
+        location: state.location,
+        floor: state.floor,
+        stall: [state.room, state.stall].filter(Boolean).join(' '),
+        problem: state.problems.join(',')
+      };
+    } else {
+      payload = {
+        type: state.type,
+        location: state.otherLocation,
+        floor: '',
+        stall: '',
+        problem: state.problems.join(',')
+      };
+    }
 
     try {
       // Content-Type을 text/plain으로 보내면 CORS preflight를 피할 수 있어
@@ -695,11 +923,7 @@
         body: JSON.stringify({
           action: "submit",
           receipt: num,
-          type: state.type,
-          location: state.location || state.otherLocation,
-          floor: state.floor,
-          stall: state.stall,
-          problem: state.problems.join(","),
+          ...payload,
           detail: document.getElementById("detailText").value,
           anonymous: state.anonymous,
           contact: state.anonymous ? "" : document.getElementById("contactInput").value,
@@ -713,7 +937,7 @@
 
     document.getElementById('receiptNum').textContent = num;
     document.getElementById('receiptInfo').innerHTML =
-      `접수 시각: ${timeStr}<br>유형: ${state.type} · ${state.problems.length}개 문제 선택`;
+      `접수 시각: ${timeStr}<br>유형: ${state.type === '근무복' ? '근무복 요청 · ' + state.wwCategory : state.type}`;
 
     document.getElementById('progressFill').style.width = '100%';
     document.getElementById('progressPct').textContent = '100%';
@@ -729,40 +953,44 @@
   }
 
   function resetForm() {
-    Object.assign(state, { type:'', location:'', floor:'', stall:'', otherLocation:'', problems:[], detail:'', photoBase64:'', photoName:'', anonymous:true, contact:'' });
-    document.getElementById('stallInput').value = '';
-    document.getElementById('otherLocation').value = '';
-    document.getElementById('detailText').value = '';
+    Object.assign(state, {
+      type:'', location:'', floor:'', room:'', stall:'',
+      otherLocation:'', problems:[], detail:'',
+      wwCategory:'', wwSize:'', wwCount:'',
+      photoBase64:'', photoName:'', anonymous:true, contact:''
+    });
+    ['stallInput','otherLocation','detailText','contactInput','wwSize','wwCount'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
     document.getElementById('filePreview').textContent = '';
     document.getElementById('photoThumb').style.display = 'none';
     document.getElementById('photoInput').value = '';
-    document.getElementById('contactInput').value = '';
     document.getElementById('anonSwitch').classList.add('on');
     document.getElementById('contactSection').style.display = 'none';
+    document.getElementById('wwNote').style.display = 'none';
     document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
     document.getElementById('btn1').disabled = true;
+    state.anonymous = true;
     showSection(1);
     updateProgress(1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  /* 입력 감지 (2단계 유효성) */
   document.addEventListener('input', function(e) {
-    if (e.target.id === 'otherLocation') {
-      document.getElementById('btn2').disabled = e.target.value.trim() === '';
-    }
+    if (['otherLocation','wwSize','wwCount'].includes(e.target.id)) checkSection2();
   });
 
   /* ═══════════════════════════════════════════
      QR코드 자동 위치 선택
      예: index.html?loc=사무동 화장실
-     → 화장실 + 해당 위치가 미리 선택된 상태로 시작
      ═══════════════════════════════════════════ */
   function initFromQR() {
     const params = new URLSearchParams(location.search);
     const loc = params.get('loc');
     if (!loc) { updateProgress(1); return; }
 
-    if (TOILET_LOCATIONS.includes(loc)) {
+    if (Object.keys(TOILET_CONFIG).includes(loc)) {
       selectType('화장실');
       setupSection2();
       selectLocation(loc);
@@ -770,23 +998,28 @@
       document.getElementById('qrLocText').textContent = loc;
       showSection(2);
       updateProgress(2);
-    } else {
-      // 화장실 외 시설 QR (목욕탕, 헬스장 등)
-      const facilityTypes = ['목욕탕','헬스장','도로','구내식당'];
-      if (facilityTypes.includes(loc)) {
-        selectType(loc);
-        setupSection2();
-        document.getElementById('otherLocation').value = loc;
-        document.getElementById('qrBanner').style.display = 'block';
-        document.getElementById('qrLocText').textContent = loc;
-        showSection(2);
-        updateProgress(2);
-      } else {
-        updateProgress(1);
-      }
+      return;
     }
+
+    const facilityTypes = ['목욕탕','헬스장','도로','구내식당','휴게시설','통근버스','근무복'];
+    if (facilityTypes.includes(loc)) {
+      selectType(loc);
+      setupSection2();
+      if (loc !== '근무복') document.getElementById('otherLocation').value = loc;
+      document.getElementById('qrBanner').style.display = 'block';
+      document.getElementById('qrLocText').textContent = loc;
+      showSection(2);
+      updateProgress(2);
+      checkSection2();
+      return;
+    }
+
+    updateProgress(1);
   }
 
+  buildTypeGrid();
+  buildLocGrid();
+  buildWwGrid();
   initFromQR();
 </script>
 </body>

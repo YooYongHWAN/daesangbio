@@ -508,6 +508,10 @@
     </div>
   </div>
 
+  <div style="font-size:11px; color:var(--muted); line-height:1.6; padding:0 4px; margin-bottom:16px;">
+    ⚠️ 욕설·허위 접수는 처리되지 않으며, 반복적인 부적절 접수 시 이용이 제한될 수 있습니다.
+  </div>
+
   <div class="nav-btns">
     <button class="btn-back" onclick="goBack(3)">← 뒤로</button>
     <button class="btn-submit" id="submitBtn" onclick="submitForm()">✅ 접수 완료</button>
@@ -532,6 +536,65 @@
      ★ 설정: Apps Script 웹앱 배포 URL을 입력하세요
      ═══════════════════════════════════════════ */
   const API_URL = "https://script.google.com/macros/s/AKfycbwG96LUs3N1LMv6BKe9M8xo71tWbLVUge_emPtFPtW_QfNMasyGdbodnNEk8P0F_MCmDA/exec";
+
+  /* ═══════════════════════════════════════════
+     ★ 도배 방지 설정 (숫자만 바꾸면 됩니다)
+     ═══════════════════════════════════════════ */
+  const ANTISPAM = {
+    MIN_INTERVAL_MIN: 5,  // 접수 간 최소 간격 (분)
+    DAILY_LIMIT: 5         // 같은 기기에서 하루 최대 접수 건수
+  };
+
+  /* ═══════════════════════════════════════════
+     ★ 금칙어 목록 (자유롭게 추가/삭제하세요)
+     - 공백을 제거하고 비교하므로 "시 발" 처럼
+       띄어쓰기로 우회하는 것도 걸러냅니다
+     ═══════════════════════════════════════════ */
+  const BANNED_WORDS = [
+    '시발','씨발','씨빨','시바','씨바','ㅅㅂ','ㅆㅂ',
+    '병신','븅신','ㅂㅅ','지랄','ㅈㄹ','새끼','색기','ㅅㄲ',
+    '개새','개색','좆','존나','ㅈㄴ','썅','엿먹','꺼져',
+    '미친놈','미친년','또라이','닥쳐'
+  ];
+
+  /* ─── 도배 방지: 접수 기록 (이 기기 브라우저에만 저장됨) ─── */
+  function getSubmitLog() {
+    try { return JSON.parse(localStorage.getItem('submitLog') || '[]'); }
+    catch (e) { return []; }
+  }
+  function saveSubmitLog(arr) {
+    try { localStorage.setItem('submitLog', JSON.stringify(arr)); } catch (e) {}
+  }
+  function checkSpamLimit() {
+    const now = Date.now();
+    // 24시간 지난 기록은 자동 삭제
+    const log = getSubmitLog().filter(t => now - t < 24 * 60 * 60 * 1000);
+    saveSubmitLog(log);
+
+    if (log.length > 0) {
+      const sinceLast = now - log[log.length - 1];
+      const minGap = ANTISPAM.MIN_INTERVAL_MIN * 60 * 1000;
+      if (sinceLast < minGap) {
+        const waitMin = Math.ceil((minGap - sinceLast) / 60000);
+        return '⏱️ 접수 간격이 너무 짧습니다.\n약 ' + waitMin + '분 후에 다시 접수해주세요.';
+      }
+    }
+    if (log.length >= ANTISPAM.DAILY_LIMIT) {
+      return '📋 하루 접수 한도(' + ANTISPAM.DAILY_LIMIT + '건)에 도달했습니다.\n내일 다시 접수해주세요.';
+    }
+    return null;
+  }
+  function recordSubmit() {
+    const log = getSubmitLog();
+    log.push(Date.now());
+    saveSubmitLog(log);
+  }
+
+  /* ─── 금칙어 검사 (공백 제거 후 비교) ─── */
+  function containsBannedWord(text) {
+    const t = String(text || '').replace(/\s/g, '').toLowerCase();
+    return BANNED_WORDS.some(w => t.includes(w));
+  }
 
   /* ═══════════════════════════════════════════
      화장실 위치별 구조 설정
@@ -998,6 +1061,25 @@
 
   /* ───────── 제출 ───────── */
   async function submitForm() {
+    // 도배 방지: 접수 간격/횟수 제한
+    const spamMsg = checkSpamLimit();
+    if (spamMsg) {
+      alert(spamMsg);
+      return;
+    }
+
+    // 금칙어 검사 (상세내용, 위치, 칸번호, 연락처)
+    const textToCheck = [
+      document.getElementById('detailText').value,
+      document.getElementById('otherLocation').value,
+      document.getElementById('stallInput').value,
+      document.getElementById('contactInput').value
+    ].join(' ');
+    if (containsBannedWord(textToCheck)) {
+      alert('⚠️ 부적절한 표현이 포함되어 있어 접수할 수 없습니다.\n내용을 수정한 후 다시 접수해주세요.');
+      return;
+    }
+
     // 근무복/안전화는 연락처 필수
     if (state.type === '근무복' || state.type === '안전화') {
       const c = document.getElementById('contactInput').value.trim();
@@ -1077,6 +1159,9 @@
     } catch (e) {
       console.warn("구글 시트 저장 실패:", e);
     }
+
+    // 도배 방지용 접수 기록 저장
+    recordSubmit();
 
     document.getElementById('receiptNum').textContent = num;
     document.getElementById('receiptInfo').innerHTML =

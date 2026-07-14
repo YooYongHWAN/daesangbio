@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>시설물 불편사항 접수</title>
+<title>임직원 통합 접수창구</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -165,6 +165,25 @@
     border: 1px solid var(--border);
     background: #0d1b34;
   }
+  .consent-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .consent-box.checked { border-color: var(--success); background: rgba(46,204,113,0.08); }
+  .consent-box .check-box { margin-top: 2px; }
+  .consent-box.checked .check-box { background: var(--success); border-color: var(--success); }
+  .consent-box.checked .check-box::after { opacity: 1; }
+  .consent-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .consent-detail { font-size: 11px; color: var(--muted); line-height: 1.6; }
 
   .toggle-row {
     display: flex; align-items: center; justify-content: space-between;
@@ -313,9 +332,9 @@
 <body>
 
 <div class="header">
-  <div class="header-badge">사내 시설물 접수 시스템</div>
-  <h1>불편사항을<br><span>접수</span>해주세요</h1>
-  <p>익명으로 안전하게 · 처리결과 카카오채널 공지</p>
+  <div class="header-badge">임직원 통합 접수창구</div>
+  <h1>불편사항부터 신청까지<br><span>한 번에</span> 접수하세요</h1>
+  <p>익명 접수 가능 · 처리결과 카카오채널 공지</p>
 </div>
 
 <div class="qr-banner" id="qrBanner">📍 <span id="qrLocText"></span> 위치가 자동 선택되었어요!</div>
@@ -477,6 +496,16 @@
       <div class="field-label">연락처 또는 부서명</div>
       <input type="text" id="contactInput" placeholder="예: 생산1팀 홍길동 / 010-0000-0000" />
     </div>
+    <div class="consent-box" id="consentBox" onclick="toggleConsent()">
+      <div class="check-box"></div>
+      <div>
+        <div class="consent-title">개인정보 수집·이용에 동의합니다.</div>
+        <div class="consent-detail">
+          수집항목: 이름, 전화번호 / 이용목적: 민원 접수 및 처리 / 보유기간: 처리 완료 후 1년<br>
+          동의를 거부할 권리가 있으나 미동의 시 민원 접수가 제한될 수 있습니다.
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="nav-btns">
@@ -584,7 +613,7 @@
     wwCategory: '', wwSize: '', wwCount: '',
     shoeModel: '', shoeSize: '', shoeCount: '',
     photoBase64: '', photoName: '',
-    anonymous: true, contact: ''
+    anonymous: true, contact: '', consent: false
   };
 
   /* ───────── 유형 카드 렌더링 ───────── */
@@ -880,6 +909,11 @@
     document.getElementById('contactSection').style.display = state.anonymous ? 'none' : 'block';
   }
 
+  function toggleConsent() {
+    state.consent = !state.consent;
+    document.getElementById('consentBox').classList.toggle('checked', state.consent);
+  }
+
   /* ───────── 사진 처리 ───────── */
   function onFileChange() {
     const f = document.getElementById('photoInput').files[0];
@@ -973,6 +1007,12 @@
       }
     }
 
+    // 실명 접수(연락처 입력) 시 개인정보 수집·이용 동의 필수
+    if (!state.anonymous && !state.consent) {
+      alert('개인정보 수집·이용에 동의해주세요.\n(연락처를 입력하지 않으려면 익명 접수를 이용해주세요)');
+      return;
+    }
+
     const num = generateReceiptNum();
     const now = new Date();
     const timeStr = now.toLocaleDateString('ko-KR') + ' ' + now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
@@ -1061,7 +1101,7 @@
       otherLocation:'', problems:[], detail:'',
       wwCategory:'', wwSize:'', wwCount:'',
       shoeModel:'', shoeSize:'', shoeCount:'',
-      photoBase64:'', photoName:'', anonymous:true, contact:''
+      photoBase64:'', photoName:'', anonymous:true, contact:'', consent:false
     });
     ['stallInput','otherLocation','detailText','contactInput','wwSize','wwCount','shoeSize','shoeCount'].forEach(id => {
       document.getElementById(id).value = '';
@@ -1071,6 +1111,7 @@
     document.getElementById('photoInput').value = '';
     document.getElementById('anonSwitch').classList.add('on');
     document.getElementById('contactSection').style.display = 'none';
+    document.getElementById('consentBox').classList.remove('checked');
     document.getElementById('wwNote').style.display = 'none';
     document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
     document.getElementById('btn1').disabled = true;

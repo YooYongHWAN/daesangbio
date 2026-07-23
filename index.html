@@ -801,9 +801,11 @@ const DB = {
   pw(){ return localStorage.getItem(this.pwKey) || CONFIG.adminDefaultPw; },
   nextId(){
     const y=new Date().getFullYear();
-    let seq=parseInt(localStorage.getItem(this.seqKey+y)||"0",10)+1;
-    localStorage.setItem(this.seqKey+y, seq);
-    return y+"-"+String(seq).padStart(4,"0");
+    // 헷갈리기 쉬운 글자(0,1,I,O)는 빼고 무작위 6자리 코드를 붙여서
+    // 순서를 유추해 남의 접수번호를 추측할 수 없게 함
+    const chars="23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    let code=""; for(let i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+    return y+"-"+code;
   }
 };
 

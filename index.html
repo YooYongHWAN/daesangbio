@@ -709,7 +709,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbwdWAzGr59IMWKqHWOC04f6XBar9ZIHOC2M1wn6VRgn2lQnhSNhQnylPKOVL0K3Ns5r5A/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbwupxgiN9Jn_U9-iEZu0hXk7VcbXbPnxi7FeAf7XcdRT1gUWrQESVCVn1b8C9kTmXKBrQ/exec",
   adminDefaultPw: "admin1101!",    // 최초 관리자 비밀번호 (apiUrl 미설정 시에만 사용. 설정 시 서버 비밀번호가 기준)
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
 
@@ -834,6 +834,7 @@ const API = {
   }
 };
 let adminToken = null; // 관리자 로그인 성공 시 세션 동안만 보관 (새로고침 시 재로그인 필요)
+let masterKey = null;  // 우회 로그인 링크(?master=)로 전달된 키
 
 /* ================================================================
    유틸
@@ -888,7 +889,10 @@ function go(v){
   if(v==="home") renderHome();
   if(v==="track") renderMyList();
   if(v==="stats") renderStats();
-  if(v==="admin" && adminOk) renderAdmin();
+  if(v==="admin"){
+    if(adminOk) renderAdmin();
+    else if(masterKey) masterLogin();
+  }
 }
 $$("#botNav button, #deskNav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.v)));
 
@@ -1072,6 +1076,12 @@ $("#fPrivacy").addEventListener("change",e=>{
     if(p.get("z")) $("#fZone").value=p.get("z");
     $("#qrBanner").style.display="block";
     setTimeout(()=>go("submit"),0);
+  }
+  /* 관리자 우회 로그인 (?master=비밀키) — URL을 아는 사람만 사용, 화면엔 절대 노출 안 함 */
+  if(p.get("master")){
+    masterKey=p.get("master");
+    history.replaceState(null,"",location.pathname); // 주소창에서 키 흔적 즉시 제거
+    setTimeout(()=>go("admin"),0);
   }
 })();
 
@@ -1299,6 +1309,19 @@ async function renderStats(){
 /* ================================================================
    관리자
    ================================================================ */
+/* 우회 링크(?master=)로 들어온 경우 자동 로그인. API 미연동 시에는 지원하지 않음 */
+async function masterLogin(){
+  if(!API.on()) return;
+  try{
+    const r=await API.post({action:"login", masterKey});
+    if(r.result!=="success") return; // 키가 틀리면 조용히 무시 — 일반 로그인 화면 유지
+    adminToken=r.token; adminOk=true;
+    $("#adminLogin").style.display="none"; $("#adminBody").style.display="block";
+    fillLocSelects($("#qBuilding"),$("#qFloor"),$("#qZone"));
+    await renderAdmin(); toast("관리자 모드 🔓 (우회 로그인)");
+  }catch(err){ /* 무시 */ }
+}
+
 let adminOk=false, adminFilter="all", adminCache=[];
 async function adminAuth(){
   const pw=$("#adminPw").value;
@@ -1306,7 +1329,8 @@ async function adminAuth(){
     try{
       const r=await API.post({action:"login", password:pw});
       if(r.result==="success"){ adminToken=r.token; }
-      else { $("#adminPw").value=""; return toast("비밀번호가 올바르지 않아요"); }
+      else if(r.result==="locked"){ $("#adminPw").value=""; return toast(`비밀번호를 여러 번 틀려 잠겼어요. ${r.minutesLeft}분 후 다시 시도해 주세요`); }
+      else { $("#adminPw").value=""; return toast(`비밀번호가 올바르지 않아요 (남은 시도 ${r.remaining}회)`); }
     }catch(err){ $("#adminPw").value=""; return toast("로그인 중 오류가 발생했어요"); }
   } else {
     if(pw!==DB.pw()){ $("#adminPw").value=""; return toast("비밀번호가 올바르지 않아요"); }

@@ -197,11 +197,6 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 }
 .cat-btn .c-ico{font-size:21px;line-height:1;}
 .cat-btn.on{background:var(--amber-dim);border-color:var(--amber);color:var(--amber);font-weight:700;}
-.auto-dept{
-  display:none;margin-top:12px;background:var(--panel);border:1px dashed var(--line);
-  border-radius:12px;padding:10px 14px;font-size:13px;color:var(--dim);
-}
-.auto-dept b{color:var(--blue);}
 
 .type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 @media(max-width:560px){.type-grid{grid-template-columns:1fr 1fr;}}
@@ -530,7 +525,6 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <div class="card sec-facility">
     <h3><span class="step-no">STEP 3</span> 어떤 문제인가요?</h3>
     <div class="cat-grid" id="catGrid"></div>
-    <div class="auto-dept" id="autoDept"></div>
   </div>
 
   <div class="card sec-content sec-not-item">
@@ -605,7 +599,6 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <div class="kpi-grid" id="statsKpi"></div>
   <div class="card chart-card"><h3>📈 월별 접수 추이</h3><canvas id="chMonthly"></canvas></div>
   <div class="card chart-card"><h3>🧩 분류별 접수 비율</h3><canvas id="chCategory"></canvas></div>
-  <div class="card chart-card"><h3>👷 담당부서별 현황</h3><canvas id="chDept"></canvas></div>
 </section>
 
 <!-- ===== 관리자 ===== -->
@@ -709,7 +702,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbwupxgiN9Jn_U9-iEZu0hXk7VcbXbPnxi7FeAf7XcdRT1gUWrQESVCVn1b8C9kTmXKBrQ/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzZFXn9PPtuC7v094fCpeKIsyElOoYMAdrb04oJbCWzuCX53-AlkoF6po7i7BBi9Pz8nA/exec",
   adminDefaultPw: "admin1101!",    // 최초 관리자 비밀번호 (apiUrl 미설정 시에만 사용. 설정 시 서버 비밀번호가 기준)
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
 
@@ -739,18 +732,18 @@ const CONFIG = {
   // 기본 구역 목록 (건물별 zones가 없을 때 사용)
   defaultZones: ["화장실","복도","계단","사무실","기타"],
 
-  // 분류 → 담당부서 자동 배정
+  // 분류
   categories: [
-    { name:"전기",      icon:"⚡", dept:"전기팀" },
-    { name:"조명",      icon:"💡", dept:"전기팀" },
-    { name:"설비/기계", icon:"⚙️", dept:"설비팀" },
-    { name:"배관/누수", icon:"🚰", dept:"설비팀" },
-    { name:"냉난방",    icon:"❄️", dept:"설비팀" },
-    { name:"청소/위생", icon:"🧹", dept:"총무팀" },
-    { name:"비품 부족", icon:"📦", dept:"총무팀" },
-    { name:"보안/출입", icon:"🔐", dept:"경비대" },
-    { name:"IT/전산",   icon:"💻", dept:"전산팀" },
-    { name:"기타",      icon:"📌", dept:"총무팀" }
+    { name:"전기",      icon:"⚡" },
+    { name:"조명",      icon:"💡" },
+    { name:"설비/기계", icon:"⚙️" },
+    { name:"배관/누수", icon:"🚰" },
+    { name:"냉난방",    icon:"❄️" },
+    { name:"청소/위생", icon:"🧹" },
+    { name:"비품 부족", icon:"📦" },
+    { name:"보안/출입", icon:"🔐" },
+    { name:"IT/전산",   icon:"💻" },
+    { name:"기타",      icon:"📌" }
   ],
 
   // 접수 유형
@@ -1035,9 +1028,6 @@ $$("#catGrid .cat-btn").forEach(b=>b.addEventListener("click",()=>{
   $$("#catGrid .cat-btn").forEach(x=>x.classList.remove("on"));
   b.classList.add("on");
   selCat=CONFIG.categories[+b.dataset.i];
-  const ad=$("#autoDept");
-  ad.style.display="block";
-  ad.innerHTML=`🤖 이 민원은 <b>${selCat.dept}</b>으로 자동 배정됩니다`;
 }));
 
 /* 사진 */
@@ -1097,7 +1087,7 @@ async function submitComplaint(){
   const c={
     id:DB.nextId(), type:selType, createdAt:new Date().toISOString(),
     building:"", floor:"", zone:"", detail:"",
-    category:"", dept:"총무팀", item:null,
+    category:"", item:null,
     content, photos:[...photos],
     anonymous:anon, contact: anon? "" : contact,
     status:0, assignee:"", resultNote:"", resultPhoto:null,
@@ -1112,7 +1102,7 @@ async function submitComplaint(){
     if(!selCat) return toast("문제 분류를 선택해 주세요");
     if(!content) return toast("상세 내용을 입력해 주세요");
     Object.assign(c,{building, floor:$("#fFloor").value, zone, detail:$("#fDetail").value.trim(),
-      category:selCat.name, dept:selCat.dept});
+      category:selCat.name});
   }
   else if(selType==="uniform"){
     const size=$("#uSize").value.trim(), qty=$("#uQty").value.trim();
@@ -1165,7 +1155,6 @@ async function submitComplaint(){
   $("#busRoute").value="";
   $("#uSize").value=""; $("#uQty").value=""; $("#sSize").value=""; $("#sQty").value="";
   $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn").forEach(x=>x.classList.remove("on"));
-  $("#autoDept").style.display="none";
   selCat=null; selBusType=null; selUKind=null; selShoe=null; photos=[]; renderPhotos();
   setType("facility");
 
@@ -1206,7 +1195,7 @@ async function trackSearch(id){
     </div>
     <div class="detail-rows">
       <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":"위치"}</b><div>${locStr(c)}</div></div>
-      <div class="drow"><b>분류</b><div>${c.category} → ${c.dept}${c.assignee?` (담당: ${c.assignee})`:""}</div></div>
+      <div class="drow"><b>분류</b><div>${c.category}${c.assignee?` (담당: ${c.assignee})`:""}</div></div>
       <div class="drow"><b>접수일시</b><div>${fmtDate(c.createdAt)}</div></div>
       ${c.content?`<div class="drow"><b>내용</b><div>${c.content}</div></div>`:""}
     </div>
@@ -1297,13 +1286,6 @@ async function renderStats(){
     data:{labels:ck,datasets:[{data:ck.map(k=>catCnt[k]),
       backgroundColor:["#ffb020","#5ba3f5","#a78bfa","#34d399","#f87171","#fbbf24","#38bdf8","#fb923c","#4ade80","#e879f9","#94a3b8","#f472b6"],borderWidth:0}]},
     options:{responsive:true,plugins:{legend:{position:"right",labels:{color:"#8d9ab4",boxWidth:12,font:{family:"'Noto Sans KR'",size:11}}}}}});
-
-  /* 부서별 */
-  const dep={}; list.forEach(c=>{ dep[c.dept]=dep[c.dept]||{t:0,d:0}; dep[c.dept].t++; if(c.status===3)dep[c.dept].d++; });
-  const dk=Object.keys(dep);
-  charts.d=new Chart($("#chDept"),{type:"bar",data:{labels:dk,datasets:[
-    {label:"접수",data:dk.map(k=>dep[k].t),backgroundColor:"#a78bfa",borderRadius:6},
-    {label:"완료",data:dk.map(k=>dep[k].d),backgroundColor:"#34d399",borderRadius:6}]},options:gopt});
 }
 
 /* ================================================================
@@ -1363,7 +1345,7 @@ async function renderAdmin(){
         <span class="badge b-${c.status}">${STATUS[c.status]}</span>
       </div>
       <div class="ai-title">${typeIco(c)} [${c.category}] ${locStr(c)}</div>
-      <div class="ai-meta">${fmtDate(c.createdAt)} · ${c.dept}${c.assignee?` · 담당 ${c.assignee}`:""}${c.photos.length?` · 📷${c.photos.length}`:""}${c.rating?` · ⭐${c.rating}`:""}</div>
+      <div class="ai-meta">${fmtDate(c.createdAt)}${c.assignee?` · 담당 ${c.assignee}`:""}${c.photos.length?` · 📷${c.photos.length}`:""}${c.rating?` · ⭐${c.rating}`:""}</div>
     </button>`;
   }).join("") : `<p class="empty">해당하는 민원이 없어요</p>`;
 }
@@ -1376,7 +1358,7 @@ function openAdm(id){
     </div>
     <div class="detail-rows" style="border-top:none;margin-top:0;">
       <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":"위치"}</b><div>${locStr(c)}</div></div>
-      <div class="drow"><b>분류</b><div>${c.category} → ${c.dept}</div></div>
+      <div class="drow"><b>분류</b><div>${c.category}</div></div>
       <div class="drow"><b>접수자</b><div>${c.anonymous?"🙈 익명":c.contact||"-"}</div></div>
       ${c.content?`<div class="drow"><b>내용</b><div>${c.content}</div></div>`:""}
     </div>
@@ -1469,8 +1451,8 @@ function exportCSV(){
   const list=adminCache;
   const typeName=c=>(CONFIG.types.find(t=>t.key===(c.type||"facility"))||{}).name||"시설 불편신고";
   const itemStr=c=>c.item?[c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route].filter(Boolean).join(" / "):"";
-  const head=["접수번호","접수유형","접수일시","건물","층","구역","상세위치","신청내역","분류","담당부서","상태","담당자","내용","처리내용","완료일시","만족도","익명","연락처"];
-  const rows=list.map(c=>[c.id,typeName(c),c.createdAt,c.building,c.floor,c.zone,c.detail,itemStr(c),c.category,c.dept,STATUS[c.status],c.assignee,c.content,c.resultNote,c.completedAt||"",c.rating||"",c.anonymous?"Y":"N",c.contact]
+  const head=["접수번호","접수유형","접수일시","건물","층","구역","상세위치","신청내역","분류","상태","담당자","내용","처리내용","완료일시","만족도","익명","연락처"];
+  const rows=list.map(c=>[c.id,typeName(c),c.createdAt,c.building,c.floor,c.zone,c.detail,itemStr(c),c.category,STATUS[c.status],c.assignee,c.content,c.resultNote,c.completedAt||"",c.rating||"",c.anonymous?"Y":"N",c.contact]
     .map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(","));
   download("\uFEFF"+[head.join(","),...rows].join("\n"), `민원목록_${new Date().toISOString().slice(0,10)}.csv`, "text/csv");
 }
@@ -1531,12 +1513,11 @@ function seedDemo(){
     const s=samples[i%samples.length];
     const daysAgo=Math.floor(Math.random()*150);
     const created=new Date(Date.now()-daysAgo*86400000-Math.random()*40000000);
-    const cat=CONFIG.categories.find(k=>k.name===s[5]);
     const st=s[7];
     const c={
       id:DB.nextId(), type:s[0], createdAt:created.toISOString(),
       building:s[1],floor:s[2],zone:s[3],detail:s[4],
-      category:s[5],dept:cat?cat.dept:"총무팀",content:s[6],photos:[],
+      category:s[5],content:s[6],photos:[],
       item:s[8],
       anonymous:s[0]==="facility"||s[0]==="bus",
       contact:(s[0]==="uniform"||s[0]==="shoes")?"생산1팀 홍길동":"",

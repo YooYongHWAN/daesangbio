@@ -711,7 +711,8 @@ const CONFIG = {
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
   apiUrl: "https://script.google.com/macros/s/AKfycbzu2Hb_17pz9U-UGmtv-oiIkUDxqZQojO5Q5uVlG6WrGq2Ze8N0HkW-J9QlRWIB4amFWA/exec",
-  adminDefaultPw: "admin1101!",    // 최초 관리자 비밀번호 (apiUrl 미설정 시에만 사용. 설정 시 서버 비밀번호가 기준)
+  adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
+                                              // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
 
   // 건물 구조
@@ -856,14 +857,18 @@ let masterKey = null;  // 우회 로그인 링크(?master=)로 전달된 키
    ================================================================ */
 const $ = s=>document.querySelector(s);
 const $$ = s=>[...document.querySelectorAll(s)];
+/* 사용자 입력을 화면에 표시하기 전 HTML 이스케이프 처리 (XSS 방지) */
+function esc(s){
+  return String(s??"").replace(/[&<>"']/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove("show"),2200); }
 function fmtDate(iso){ const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
 function locStr(c){
   const t=c.type||"facility";
-  if(t==="uniform"||t==="shoes") return `${c.item.kind} ${c.item.size} × ${c.item.qty}개`;
-  if(t==="bus") return `통근버스 · ${c.item.kind}${c.item.route?` · ${c.item.route}`:""}`;
-  if(t==="locker") return `${c.item.room} 락커 ${c.item.number}번 · ${c.item.kind}`;
-  return [c.building, c.floor!=="해당없음"?c.floor:"", c.zone, c.detail].filter(Boolean).join(" · ");
+  if(t==="uniform"||t==="shoes") return `${esc(c.item.kind)} ${esc(c.item.size)} × ${esc(c.item.qty)}개`;
+  if(t==="bus") return `통근버스 · ${esc(c.item.kind)}${c.item.route?` · ${esc(c.item.route)}`:""}`;
+  if(t==="locker") return `${esc(c.item.room)} 락커 ${esc(c.item.number)}번 · ${esc(c.item.kind)}`;
+  return [c.building, c.floor!=="해당없음"?c.floor:"", c.zone, c.detail].filter(Boolean).map(esc).join(" · ");
 }
 function typeIco(c){
   const t=CONFIG.types.find(x=>x.key===(c.type||"facility"));
@@ -940,7 +945,7 @@ async function renderHome(){
   $("#homeFeed").innerHTML = recent.length ? recent.map(c=>`
     <div class="feed-item">
       <span class="f-ico">${typeIco(c)}</span>
-      <div class="f-main"><b>${locStr(c)} — ${c.category}</b><span>${fmtDate(c.createdAt)} 접수</span></div>
+      <div class="f-main"><b>${locStr(c)} — ${esc(c.category)}</b><span>${fmtDate(c.createdAt)} 접수</span></div>
       <span class="badge b-${c.status}">${STATUS[c.status]}</span>
     </div>`).join("") : `<p class="empty">아직 접수된 민원이 없어요</p>`;
 }
@@ -1216,7 +1221,7 @@ async function trackSearch(id){
   } else {
     c=DB.load().find(x=>x.id===q);
   }
-  if(!c){ box.innerHTML=`<div class="card"><p class="empty">'${q}' 접수번호를 찾을 수 없어요.<br>번호를 다시 확인해 주세요.</p></div>`; return; }
+  if(!c){ box.innerHTML=`<div class="card"><p class="empty">'${esc(q)}' 접수번호를 찾을 수 없어요.<br>번호를 다시 확인해 주세요.</p></div>`; return; }
   box.innerHTML=`
   <div class="card track-card">
     <div class="tr-head">
@@ -1231,9 +1236,9 @@ async function trackSearch(id){
     </div>
     <div class="detail-rows">
       <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":c.type==="locker"?"락커 정보":"위치"}</b><div>${locStr(c)}</div></div>
-      <div class="drow"><b>분류</b><div>${c.category}${c.assignee?` (담당: ${c.assignee})`:""}</div></div>
+      <div class="drow"><b>분류</b><div>${esc(c.category)}${c.assignee?` (담당: ${esc(c.assignee)})`:""}</div></div>
       <div class="drow"><b>접수일시</b><div>${fmtDate(c.createdAt)}</div></div>
-      ${c.content?`<div class="drow"><b>내용</b><div>${c.content}</div></div>`:""}
+      ${c.content?`<div class="drow"><b>내용</b><div>${esc(c.content)}</div></div>`:""}
     </div>
     ${c.status===3 ? renderResultBox(c) : ""}
   </div>`;
@@ -1241,7 +1246,7 @@ async function trackSearch(id){
 function renderResultBox(c){
   return `<div class="result-box">
     <h4>✅ 처리 완료 (${c.completedAt?fmtDate(c.completedAt):""})</h4>
-    ${c.resultNote?`<div>${c.resultNote}</div>`:`<div>처리가 완료되었습니다.</div>`}
+    ${c.resultNote?`<div>${esc(c.resultNote)}</div>`:`<div>처리가 완료되었습니다.</div>`}
     ${c.resultPhoto?`<img src="${c.resultPhoto}">`:""}
     ${c.rating===null?`
       <div style="margin-top:12px;font-size:12.5px;color:var(--dim);">처리 결과는 만족스러우셨나요?</div>
@@ -1380,8 +1385,8 @@ async function renderAdmin(){
         <span class="id num">${c.id}</span>
         <span class="badge b-${c.status}">${STATUS[c.status]}</span>
       </div>
-      <div class="ai-title">${typeIco(c)} [${c.category}] ${locStr(c)}</div>
-      <div class="ai-meta">${fmtDate(c.createdAt)}${c.assignee?` · 담당 ${c.assignee}`:""}${c.photos.length?` · 📷${c.photos.length}`:""}${c.rating?` · ⭐${c.rating}`:""}</div>
+      <div class="ai-title">${typeIco(c)} [${esc(c.category)}] ${locStr(c)}</div>
+      <div class="ai-meta">${fmtDate(c.createdAt)}${c.assignee?` · 담당 ${esc(c.assignee)}`:""}${c.photos.length?` · 📷${c.photos.length}`:""}${c.rating?` · ⭐${c.rating}`:""}</div>
     </button>`;
   }).join("") : `<p class="empty">해당하는 민원이 없어요</p>`;
 }
@@ -1394,9 +1399,9 @@ function openAdm(id){
     </div>
     <div class="detail-rows" style="border-top:none;margin-top:0;">
       <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":c.type==="locker"?"락커 정보":"위치"}</b><div>${locStr(c)}</div></div>
-      <div class="drow"><b>분류</b><div>${c.category}</div></div>
-      <div class="drow"><b>접수자</b><div>${c.contact||"-"}</div></div>
-      ${c.content?`<div class="drow"><b>내용</b><div>${c.content}</div></div>`:""}
+      <div class="drow"><b>분류</b><div>${esc(c.category)}</div></div>
+      <div class="drow"><b>접수자</b><div>${esc(c.contact)||"-"}</div></div>
+      ${c.content?`<div class="drow"><b>내용</b><div>${esc(c.content)}</div></div>`:""}
     </div>
     ${c.photos.length?`<div class="photo-previews" style="margin-top:12px;">${c.photos.map(p=>`<div class="pp"><img src="${p}" onclick="window.open('').document.write('<img src=${p} style=max-width:100%>')"></div>`).join("")}</div>`:""}
 
@@ -1406,10 +1411,10 @@ function openAdm(id){
       </div>
     </div>
     <div class="field"><label>담당자</label>
-      <input id="admAssignee" value="${c.assignee||""}" placeholder="예: 설비팀 김반장">
+      <input id="admAssignee" value="${esc(c.assignee)}" placeholder="예: 설비팀 김반장">
     </div>
     <div class="field"><label>처리 내용 (완료 시 민원인에게 표시)</label>
-      <textarea id="admNote" placeholder="예: 잠금장치 교체 완료했습니다.">${c.resultNote||""}</textarea>
+      <textarea id="admNote" placeholder="예: 잠금장치 교체 완료했습니다.">${esc(c.resultNote)}</textarea>
     </div>
     <div class="field"><label>완료 사진</label>
       ${c.resultPhoto?`<img src="${c.resultPhoto}" style="max-width:130px;border-radius:10px;display:block;margin-bottom:8px;">`:""}

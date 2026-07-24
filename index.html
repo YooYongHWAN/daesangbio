@@ -438,19 +438,19 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 <section class="view" id="view-home">
   <div class="hero-card">
     <h2>불편사항, 바로 접수하세요</h2>
-    <p>익명 접수 가능 · 접수번호로 처리상태를 실시간 확인할 수 있어요</p>
+    <p>접수번호로 처리상태를 실시간 확인할 수 있어요</p>
     <div class="hero-actions">
       <button class="btn btn-amber" onclick="go('submit')">📋 민원 접수하기</button>
       <button class="btn btn-ghost" onclick="go('track')">🔍 내 민원 조회</button>
     </div>
   </div>
 
-  <div class="kpi-grid" id="homeKpi"></div>
-
   <div class="card">
     <h3>📢 공지사항</h3>
     <div id="homeNotice" style="font-size:13.5px;color:var(--dim);"></div>
   </div>
+
+  <div class="kpi-grid" id="homeKpi"></div>
 
   <div class="card">
     <h3>🔧 최근 처리 현황</h3>
@@ -509,6 +509,18 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
     </div>
   </div>
 
+  <!-- 탈의실 락커 -->
+  <div class="card sec-locker" style="display:none;">
+    <h3><span class="step-no">STEP 2</span> 락커 정보</h3>
+    <div class="row2">
+      <div class="field"><label>탈의실 구분 <b>*</b></label><select id="lkRoom"></select></div>
+      <div class="field"><label>락커 번호 <b>*</b></label><input id="lkNumber" inputmode="numeric" placeholder="예: 152"></div>
+    </div>
+    <div class="field"><label>요청 유형 <b>*</b></label>
+      <div class="cat-grid" id="lkTypeChips"></div>
+    </div>
+  </div>
+
   <div class="card sec-facility">
     <h3><span class="step-no">STEP 2</span> 위치 선택</h3>
     <div class="row3">
@@ -548,13 +560,9 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <div class="card">
     <h3><span class="step-no">STEP 6</span> 접수자 정보</h3>
     <div class="item-notice" id="itemNotice" style="display:none;">
-      👕 물품 <b>수령을 위해 부서와 이름</b>을 꼭 입력해 주세요! (익명 신청 불가)
+      👕 물품 <b>수령을 위해 부서와 이름</b>을 꼭 입력해 주세요!
     </div>
-    <div class="toggle-row" id="anonRow" style="margin-bottom:14px;">
-      <div class="t-label"><b>🙈 익명으로 접수하기</b><span>처리 결과 알림을 원하면 OFF 후 연락처 입력</span></div>
-      <label class="switch"><input type="checkbox" id="fAnon" checked><span class="sl"></span></label>
-    </div>
-    <div class="field" id="contactField" style="display:none;">
+    <div class="field" id="contactField">
       <label id="contactLabel">부서 / 이름 / 연락처</label>
       <input id="fContact" placeholder="예: 생산1팀 홍길동 / 010-0000-0000">
       <label class="privacy-box" for="fPrivacy">
@@ -579,7 +587,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 
   <div class="card">
     <div style="display:flex;gap:8px;">
-      <input id="trackInput" placeholder="접수번호 입력 (예: 2026-0012)" style="flex:1;">
+      <input id="trackInput" placeholder="접수번호 입력 (예: 2026-7XQK9M)" style="flex:1;">
       <button class="btn btn-amber" style="flex-shrink:0;" onclick="trackSearch()">조회</button>
     </div>
   </div>
@@ -749,6 +757,7 @@ const CONFIG = {
   // 접수 유형
   types: [
     { key:"facility", icon:"🔧", name:"시설 불편신고", desc:"고장·파손·불편사항" },
+    { key:"locker",   icon:"🔒", name:"탈의실 락커",   desc:"파손·위치변경·위생 등" },
     { key:"uniform",  icon:"👕", name:"근무복 신청",   desc:"사이즈·수량 선택" },
     { key:"shoes",    icon:"🥾", name:"안전화 신청",   desc:"모델·사이즈 선택" },
     { key:"bus",      icon:"🚌", name:"통근버스",      desc:"운행·노선 관련 접수" }
@@ -784,7 +793,18 @@ const CONFIG = {
     sizes:["230","235","240","245","250","255","260","265","270","275","280","285","290"]
   },
   // 통근버스 접수 유형
-  busTypes:["운행시간","노선·정차지","차량 상태","기사 관련","기타"]
+  busTypes:["운행시간","노선·정차지","차량 상태","기사 관련","기타"],
+  // 탈의실 락커 접수 옵션
+  locker: {
+    rooms:["임직원 탈의실","협력업체 탈의실","여직원 탈의실"],
+    issueTypes:[
+      { name:"파손/고장",      icon:"🔨" },
+      { name:"위치 변경 요청", icon:"📍" },
+      { name:"냄새/위생 문제", icon:"🧼" },
+      { name:"열쇠 분실",      icon:"🔑" },
+      { name:"기타",           icon:"📌" }
+    ]
+  }
 };
 const STATUS = ["접수완료","담당자 지정","처리중","완료"];
 const STATUS_ICO = ["📥","👷","🛠","✅"];
@@ -842,6 +862,7 @@ function locStr(c){
   const t=c.type||"facility";
   if(t==="uniform"||t==="shoes") return `${c.item.kind} ${c.item.size} × ${c.item.qty}개`;
   if(t==="bus") return `통근버스 · ${c.item.kind}${c.item.route?` · ${c.item.route}`:""}`;
+  if(t==="locker") return `${c.item.room} 락커 ${c.item.number}번 · ${c.item.kind}`;
   return [c.building, c.floor!=="해당없음"?c.floor:"", c.zone, c.detail].filter(Boolean).join(" · ");
 }
 function typeIco(c){
@@ -939,6 +960,7 @@ function setType(k){
   $$("#typeGrid .type-btn").forEach(x=>x.classList.toggle("on", x.dataset.k===k));
   const show=(sel,on)=>$$(sel).forEach(el=>el.style.display=on?"":"none");
   show(".sec-facility", k==="facility");
+  show(".sec-locker",   k==="locker");
   show(".sec-uniform",  k==="uniform");
   show(".sec-shoes",    k==="shoes");
   show(".sec-bus",      k==="bus");
@@ -947,12 +969,11 @@ function setType(k){
   show(".sec-not-item", !isItem);
   /* 물품 신청은 실명 필수 */
   $("#itemNotice").style.display = isItem ? "block" : "none";
-  $("#anonRow").style.display = isItem ? "none" : "flex";
-  if(isItem){ $("#fAnon").checked=false; $("#contactField").style.display="block"; }
-  else { $("#contactField").style.display = $("#fAnon").checked ? "none" : "block"; }
   $("#contactLabel").textContent = isItem ? "부서 / 이름 (수령 확인용)" : "부서 / 이름 / 연락처";
   $("#fContent").placeholder = k==="bus"
     ? "어떤 불편이 있었는지 알려주세요.\n예: 아침 2호차가 10분 이상 늦게 도착합니다."
+    : k==="locker"
+    ? "어떤 문제가 있는지 자세히 알려주세요.\n예: 문이 뻑뻑해서 잘 안 열려요. / 습기 때문에 냄새가 나요."
     : "어떤 문제가 있는지 자세히 알려주세요.\n예: 사무동 2층 남자화장실 문 잠금장치가 고장났습니다.";
   renumberSteps();
 }
@@ -966,7 +987,7 @@ function renumberSteps(){
 }
 
 /* 물품/버스 선택 UI */
-let selUKind=null, selShoe=null;
+let selUKind=null, selShoe=null, selLockerType=null;
 function fillOpts(sel,list,ph){ $(sel).innerHTML=(ph?`<option value="">${ph}</option>`:"")+list.map(v=>`<option>${v}</option>`).join(""); }
 
 /* 근무복 분류 버튼 */
@@ -995,6 +1016,14 @@ $("#busTypeChips").innerHTML = CONFIG.busTypes.map(t=>`<button class="chip" data
 $$("#busTypeChips .chip").forEach(b=>b.addEventListener("click",()=>{
   $$("#busTypeChips .chip").forEach(x=>x.classList.remove("on"));
   b.classList.add("on"); selBusType=b.dataset.t;
+}));
+
+fillOpts("#lkRoom",CONFIG.locker.rooms,"탈의실 선택");
+$("#lkTypeChips").innerHTML = CONFIG.locker.issueTypes.map((t,i)=>`
+  <button class="cat-btn" data-i="${i}"><span class="c-ico">${t.icon}</span>${t.name}</button>`).join("");
+$$("#lkTypeChips .cat-btn").forEach(b=>b.addEventListener("click",()=>{
+  $$("#lkTypeChips .cat-btn").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); selLockerType=CONFIG.locker.issueTypes[+b.dataset.i].name;
 }));
 
 setType("facility");
@@ -1047,11 +1076,6 @@ function renderPhotos(){
     <div class="pp"><img src="${p}"><button onclick="photos.splice(${i},1);renderPhotos()">✕</button></div>`).join("");
 }
 
-/* 익명 토글 */
-$("#fAnon").addEventListener("change",e=>{
-  $("#contactField").style.display = e.target.checked ? "none" : "block";
-  if(e.target.checked){ $("#fPrivacy").checked=false; $("#fPrivacy").dispatchEvent(new Event("change")); }
-});
 /* 개인정보 동의 시각적 표시 */
 $("#fPrivacy").addEventListener("change",e=>{
   e.target.closest(".privacy-box").classList.toggle("checked", e.target.checked);
@@ -1082,16 +1106,16 @@ async function submitComplaint(){
   if(!selType) return toast("접수 유형을 선택해 주세요");
   const content=$("#fContent").value.trim();
   const contact=$("#fContact").value.trim();
-  const anon = (selType==="uniform"||selType==="shoes") ? false : $("#fAnon").checked;
+  if(!contact) return toast("부서 / 이름 / 연락처를 입력해 주세요");
   /* 실명 접수는 개인정보 동의 필수 */
-  if(!anon && !$("#fPrivacy").checked) return toast("개인정보 수집·이용에 동의해 주세요");
+  if(!$("#fPrivacy").checked) return toast("개인정보 수집·이용에 동의해 주세요");
 
   const c={
     id:DB.nextId(), type:selType, createdAt:new Date().toISOString(),
     building:"", floor:"", zone:"", detail:"",
     category:"", item:null,
     content, photos:[...photos],
-    anonymous:anon, contact: anon? "" : contact,
+    contact,
     status:0, assignee:"", resultNote:"", resultPhoto:null,
     completedAt:null, rating:null,
     history:[{status:0, at:new Date().toISOString()}]
@@ -1124,6 +1148,15 @@ async function submitComplaint(){
     c.category="안전화 신청";
     c.item={kind:selShoe,size:size+"mm",qty};
   }
+  else if(selType==="locker"){
+    const room=$("#lkRoom").value, number=$("#lkNumber").value.trim();
+    if(!room) return toast("탈의실 구분을 선택해 주세요");
+    if(!number) return toast("락커 번호를 입력해 주세요");
+    if(!selLockerType) return toast("요청 유형을 선택해 주세요");
+    if(!content) return toast("상세 내용을 입력해 주세요");
+    c.category="탈의실 락커";
+    c.item={kind:selLockerType, room, number};
+  }
   else if(selType==="bus"){
     if(!selBusType) return toast("통근버스 접수 유형을 선택해 주세요");
     if(!content) return toast("상세 내용을 입력해 주세요");
@@ -1155,9 +1188,10 @@ async function submitComplaint(){
   $("#fDetail").value=""; $("#fContent").value=""; $("#fContact").value="";
   $("#fPrivacy").checked=false; $("#fPrivacy").dispatchEvent(new Event("change"));
   $("#busRoute").value="";
+  $("#lkNumber").value=""; $("#lkRoom").value="";
   $("#uSize").value=""; $("#uQty").value=""; $("#sSize").value=""; $("#sQty").value="";
-  $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn").forEach(x=>x.classList.remove("on"));
-  selCat=null; selBusType=null; selUKind=null; selShoe=null; photos=[]; renderPhotos();
+  $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn,#lkTypeChips .cat-btn").forEach(x=>x.classList.remove("on"));
+  selCat=null; selBusType=null; selUKind=null; selShoe=null; selLockerType=null; photos=[]; renderPhotos();
   setType("facility");
 
   $("#doneNo").textContent=c.id;
@@ -1196,7 +1230,7 @@ async function trackSearch(id){
         </div>`).join("")}
     </div>
     <div class="detail-rows">
-      <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":"위치"}</b><div>${locStr(c)}</div></div>
+      <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":c.type==="locker"?"락커 정보":"위치"}</b><div>${locStr(c)}</div></div>
       <div class="drow"><b>분류</b><div>${c.category}${c.assignee?` (담당: ${c.assignee})`:""}</div></div>
       <div class="drow"><b>접수일시</b><div>${fmtDate(c.createdAt)}</div></div>
       ${c.content?`<div class="drow"><b>내용</b><div>${c.content}</div></div>`:""}
@@ -1359,9 +1393,9 @@ function openAdm(id){
       <button class="btn btn-ghost btn-sm" onclick="$('#admModal').classList.remove('show')">닫기 ✕</button>
     </div>
     <div class="detail-rows" style="border-top:none;margin-top:0;">
-      <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":"위치"}</b><div>${locStr(c)}</div></div>
+      <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":c.type==="locker"?"락커 정보":"위치"}</b><div>${locStr(c)}</div></div>
       <div class="drow"><b>분류</b><div>${c.category}</div></div>
-      <div class="drow"><b>접수자</b><div>${c.anonymous?"🙈 익명":c.contact||"-"}</div></div>
+      <div class="drow"><b>접수자</b><div>${c.contact||"-"}</div></div>
       ${c.content?`<div class="drow"><b>내용</b><div>${c.content}</div></div>`:""}
     </div>
     ${c.photos.length?`<div class="photo-previews" style="margin-top:12px;">${c.photos.map(p=>`<div class="pp"><img src="${p}" onclick="window.open('').document.write('<img src=${p} style=max-width:100%>')"></div>`).join("")}</div>`:""}
@@ -1452,9 +1486,9 @@ function makeQR(){
 function exportCSV(){
   const list=adminCache;
   const typeName=c=>(CONFIG.types.find(t=>t.key===(c.type||"facility"))||{}).name||"시설 불편신고";
-  const itemStr=c=>c.item?[c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route].filter(Boolean).join(" / "):"";
-  const head=["접수번호","접수유형","접수일시","건물","층","구역","상세위치","신청내역","분류","상태","담당자","내용","처리내용","완료일시","만족도","익명","연락처"];
-  const rows=list.map(c=>[c.id,typeName(c),c.createdAt,c.building,c.floor,c.zone,c.detail,itemStr(c),c.category,STATUS[c.status],c.assignee,c.content,c.resultNote,c.completedAt||"",c.rating||"",c.anonymous?"Y":"N",c.contact]
+  const itemStr=c=>c.item?[c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route,c.item.room,c.item.number?c.item.number+"번":""].filter(Boolean).join(" / "):"";
+  const head=["접수번호","접수유형","접수일시","건물","층","구역","상세위치","신청내역","분류","상태","담당자","내용","처리내용","완료일시","만족도","연락처"];
+  const rows=list.map(c=>[c.id,typeName(c),c.createdAt,c.building,c.floor,c.zone,c.detail,itemStr(c),c.category,STATUS[c.status],c.assignee,c.content,c.resultNote,c.completedAt||"",c.rating||"",c.contact]
     .map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(","));
   download("\uFEFF"+[head.join(","),...rows].join("\n"), `민원목록_${new Date().toISOString().slice(0,10)}.csv`, "text/csv");
 }
@@ -1509,7 +1543,8 @@ function seedDemo(){
     ["facility","옥외화장실(냉동콤프)","1층","화장실(여)","","청소/위생","청소 상태가 좋지 않아요",2,null],
     ["uniform","","","","","근무복 신청","",3,{kind:"하계 상의",size:"100",qty:"1"}],
     ["shoes","","","","","안전화 신청","",1,{kind:"ZB-142",size:"265mm",qty:"1"}],
-    ["bus","","","","","통근버스","아침 2호차가 자주 늦게 도착합니다",2,{kind:"운행시간",route:"2호차"}]
+    ["bus","","","","","통근버스","아침 2호차가 자주 늦게 도착합니다",2,{kind:"운행시간",route:"2호차"}],
+    ["locker","","","","","탈의실 락커","락커 문이 뻑뻑해서 잘 안 열려요",1,{kind:"파손/고장",room:"임직원 탈의실",number:"152"}]
   ];
   for(let i=0;i<22;i++){
     const s=samples[i%samples.length];
@@ -1521,8 +1556,7 @@ function seedDemo(){
       building:s[1],floor:s[2],zone:s[3],detail:s[4],
       category:s[5],content:s[6],photos:[],
       item:s[8],
-      anonymous:s[0]==="facility"||s[0]==="bus",
-      contact:(s[0]==="uniform"||s[0]==="shoes")?"생산1팀 홍길동":"",
+      contact:(s[0]==="uniform"||s[0]==="shoes")?"생산1팀 홍길동":"생산1팀 홍길동",
       status:st,
       assignee:st>0?["김반장","박주임","이기사"][i%3]:"",
       resultNote:st===3?(s[0]==="uniform"||s[0]==="shoes"?"물품 준비 완료 — 총무팀에서 수령해 주세요.":"점검 후 조치 완료했습니다."):"",

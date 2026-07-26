@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -242,6 +243,39 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   display:flex;align-items:center;gap:9px;transition:.15s;
 }
 .kind-btn.on{background:var(--amber-dim);border-color:var(--amber);color:var(--amber);font-weight:700;}
+.udr-list{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+.udr{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+.udr .udr-label{flex:1 1 auto;font-size:13.5px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.udr input{flex:0 0 84px;width:84px;}
+
+/* 식단표 */
+.day-chips{display:flex;gap:7px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch;}
+.day-chips::-webkit-scrollbar{display:none;}
+.day-chip{
+  flex:0 0 auto;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:8px 12px;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-size:11px;font-weight:600;min-width:52px;transition:.15s;
+}
+.day-chip b{font-size:15px;font-weight:800;color:var(--text);line-height:1.1;}
+.day-chip.on{background:var(--amber-dim);border-color:var(--amber);color:var(--amber);}
+.day-chip.on b{color:var(--amber);}
+.day-chip.today::after{content:"오늘";font-size:9px;color:var(--amber);font-weight:700;}
+.meal-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;margin-bottom:12px;}
+.meal-card h4{display:flex;align-items:center;gap:7px;font-size:15px;font-weight:800;margin-bottom:10px;}
+.meal-card ul{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.meal-card li{font-size:14px;line-height:1.45;padding-left:13px;position:relative;}
+.meal-card li::before{content:"·";position:absolute;left:3px;color:var(--amber);font-weight:900;}
+.meal-plus{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);}
+.meal-plus .mp-tag{display:inline-block;font-size:10.5px;font-weight:800;color:var(--amber);
+  background:var(--amber-dim);border-radius:5px;padding:2px 6px;margin-bottom:6px;}
+.menu-notes{font-size:12px;color:var(--dim);line-height:1.6;margin-top:6px;}
+/* 관리자 식단 미리보기 */
+.mp-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px;}
+.mp-table{border-collapse:separate;border-spacing:6px;min-width:760px;}
+.mp-table th{font-size:11.5px;color:var(--dim);font-weight:700;padding-bottom:2px;white-space:nowrap;}
+.mp-table th.mp-sec{width:66px;}
+.mp-table td.mp-sec{font-size:12.5px;font-weight:800;color:var(--amber);white-space:nowrap;vertical-align:middle;}
+.mp-table textarea{width:150px;min-height:104px;font-size:12px;line-height:1.45;padding:8px;resize:vertical;}
 /* 안전화 사진 카드 */
 .shoe-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 @media(max-width:560px){.shoe-grid{grid-template-columns:1fr;}}
@@ -424,6 +458,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
     </div>
     <nav class="top-desktop-nav" id="deskNav">
       <button data-v="home">홈</button>
+      <button data-v="menu">식단표</button>
       <button data-v="submit">민원접수</button>
       <button data-v="track">내 민원</button>
       <button data-v="stats">통계</button>
@@ -473,17 +508,10 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <!-- 근무복 신청 -->
   <div class="card sec-uniform" style="display:none;">
     <h3><span class="step-no">STEP 2</span> 근무복 요청 정보</h3>
-    <div class="field"><label>근무복 분류 <b>*</b></label>
+    <div class="field"><label>근무복 분류 <b>*</b> <span style="font-weight:400;">— 중복 선택 가능</span></label>
       <div class="kind-grid" id="uKindGrid"></div>
     </div>
-    <div class="row2">
-      <div class="field"><label>사이즈 <b>*</b></label>
-        <input id="uSize" placeholder="예: 100, 105 / 하의: 30, 32인치">
-      </div>
-      <div class="field"><label>개수 <b>*</b></label>
-        <input id="uQty" type="number" min="1" max="9" inputmode="numeric" placeholder="예: 2">
-      </div>
-    </div>
+    <div id="uDetailList" class="udr-list"></div>
   </div>
 
   <!-- 안전화 신청 -->
@@ -501,7 +529,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <!-- 통근버스 -->
   <div class="card sec-bus" style="display:none;">
     <h3><span class="step-no">STEP 2</span> 통근버스 정보</h3>
-    <div class="field"><label>접수 유형 <b>*</b></label>
+    <div class="field"><label>접수 유형 <b>*</b> <span style="font-weight:400;">— 중복 선택 가능</span></label>
       <div class="chips" id="busTypeChips"></div>
     </div>
     <div class="field"><label>노선 / 승차 정류장 <span style="font-weight:400;">(선택)</span></label>
@@ -516,7 +544,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
       <div class="field"><label>탈의실 구분 <b>*</b></label><select id="lkRoom"></select></div>
       <div class="field"><label>락커 번호 <b>*</b></label><input id="lkNumber" inputmode="numeric" placeholder="예: 152"></div>
     </div>
-    <div class="field"><label>요청 유형 <b>*</b></label>
+    <div class="field"><label>요청 유형 <b>*</b> <span style="font-weight:400;">— 중복 선택 가능</span></label>
       <div class="cat-grid" id="lkTypeChips"></div>
     </div>
   </div>
@@ -535,7 +563,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   </div>
 
   <div class="card sec-facility">
-    <h3><span class="step-no">STEP 3</span> 어떤 문제인가요?</h3>
+    <h3><span class="step-no">STEP 3</span> 어떤 문제인가요? <span style="font-weight:400;font-size:12.5px;color:var(--dim);">— 중복 선택 가능</span></h3>
     <div class="cat-grid" id="catGrid"></div>
   </div>
 
@@ -601,6 +629,14 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 </section>
 
 <!-- ===== 통계 ===== -->
+<!-- ===== 식단표 ===== -->
+<section class="view" id="view-menu">
+  <h1 class="page-title">식단표</h1>
+  <p class="page-sub" id="menuWeekLabel">불러오는 중...</p>
+  <div class="day-chips" id="menuDayChips"></div>
+  <div id="menuBody"></div>
+</section>
+
 <section class="view" id="view-stats">
   <h1 class="page-title">처리 통계</h1>
   <p class="page-sub" id="statsMonthLabel"></p>
@@ -634,6 +670,14 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
       <button data-f="3">완료</button>
     </div>
     <div id="adminList"></div>
+
+    <div class="card" style="margin-top:22px;">
+      <h3>🍽 식단표 업로드</h3>
+      <p class="hint" style="margin:0 0 12px;">영양사님이 보내주신 엑셀 파일을 그대로 올리면 자동으로 읽어옵니다. 아래 미리보기에서 내용을 확인·수정한 뒤 저장하세요.</p>
+      <button class="btn btn-ghost btn-block" onclick="document.getElementById('menuFile').click()">📂 엑셀 파일 선택 (.xlsx)</button>
+      <input type="file" id="menuFile" accept=".xlsx,.xls" style="display:none;">
+      <div id="menuPreview" style="margin-top:14px;"></div>
+    </div>
 
     <div class="card" style="margin-top:22px;">
       <h3>🔳 QR코드 생성기</h3>
@@ -675,6 +719,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 <!-- ===== 하단 네비 ===== -->
 <nav class="bottom-nav" id="botNav">
   <button data-v="home"><span class="ico">🏠</span>홈</button>
+  <button data-v="menu"><span class="ico">🍽</span>식단</button>
   <button data-v="submit"><span class="ico">📋</span>접수</button>
   <button data-v="track"><span class="ico">🔍</span>조회</button>
   <button data-v="stats"><span class="ico">📊</span>통계</button>
@@ -710,7 +755,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbzu2Hb_17pz9U-UGmtv-oiIkUDxqZQojO5Q5uVlG6WrGq2Ze8N0HkW-J9QlRWIB4amFWA/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbxxfRVdkoOAMBhUYdPb5torQKbXVzw1hoOtleXfatSerkPg_dHO2c3ZPfqMXyhmofCJYg/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -865,14 +910,18 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 function fmtDate(iso){ const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
 function locStr(c){
   const t=c.type||"facility";
-  if(t==="uniform"||t==="shoes") return `${esc(c.item.kind)} ${esc(c.item.size)} × ${esc(c.item.qty)}개`;
+  if(t==="uniform"){
+    if(Array.isArray(c.item)) return c.item.map(it=>`${esc(it.kind)} ${esc(it.size)}×${esc(it.qty)}개`).join(" · ");
+    return `${esc(c.item.kind)} ${esc(c.item.size)} × ${esc(c.item.qty)}개`; // 이전 데이터(단일 선택) 호환
+  }
+  if(t==="shoes") return `${esc(c.item.kind)} ${esc(c.item.size)} × ${esc(c.item.qty)}개`;
   if(t==="bus") return `통근버스 · ${esc(c.item.kind)}${c.item.route?` · ${esc(c.item.route)}`:""}`;
   if(t==="locker") return `${esc(c.item.room)} 락커 ${esc(c.item.number)}번 · ${esc(c.item.kind)}`;
   return [c.building, c.floor!=="해당없음"?c.floor:"", c.zone, c.detail].filter(Boolean).map(esc).join(" · ");
 }
 function typeIco(c){
   const t=CONFIG.types.find(x=>x.key===(c.type||"facility"));
-  if(c.type==="facility"||!c.type) return (CONFIG.categories.find(k=>k.name===c.category)||{}).icon||"📌";
+  if(c.type==="facility"||!c.type) return (CONFIG.categories.find(k=>k.name===(c.category||"").split(", ")[0])||{}).icon||"📌";
   return t?t.icon:"📌";
 }
 function avgHours(list){
@@ -908,6 +957,7 @@ function go(v){
   $$("#botNav button, #deskNav button").forEach(b=>b.classList.toggle("active", b.dataset.v===v));
   window.scrollTo({top:0});
   if(v==="home") renderHome();
+  if(v==="menu") renderMenu();
   if(v==="track") renderMyList();
   if(v==="stats") renderStats();
   if(v==="admin"){
@@ -953,7 +1003,7 @@ async function renderHome(){
 /* ================================================================
    접수 폼
    ================================================================ */
-let selCat=null, selType=null, selBusType=null, photos=[];
+let selType=null, photos=[];
 
 /* 접수 유형 선택 */
 $("#typeGrid").innerHTML = CONFIG.types.map(t=>`
@@ -992,16 +1042,43 @@ function renumberSteps(){
 }
 
 /* 물품/버스 선택 UI */
-let selUKind=null, selShoe=null, selLockerType=null;
+let selUKinds=[], uKindValues={}, selShoe=null, selLockerTypes=[], selCats=[], selBusTypes=[];
 function fillOpts(sel,list,ph){ $(sel).innerHTML=(ph?`<option value="">${ph}</option>`:"")+list.map(v=>`<option>${v}</option>`).join(""); }
 
-/* 근무복 분류 버튼 */
-$("#uKindGrid").innerHTML = CONFIG.uniform.kinds.map((k,i)=>`
-  <button class="kind-btn" data-i="${i}">${k.icon} ${k.name}</button>`).join("");
-$$("#uKindGrid .kind-btn").forEach(b=>b.addEventListener("click",()=>{
-  $$("#uKindGrid .kind-btn").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on"); selUKind=CONFIG.uniform.kinds[+b.dataset.i].name;
-}));
+/* 근무복 분류 버튼 (중복 선택 가능) */
+function renderUKindGrid(){
+  $("#uKindGrid").innerHTML = CONFIG.uniform.kinds.map((k,i)=>`
+    <button class="kind-btn ${selUKinds.includes(k.name)?'on':''}" data-i="${i}">${k.icon} ${k.name}</button>`).join("");
+  $$("#uKindGrid .kind-btn").forEach(b=>b.addEventListener("click",()=>{
+    const name=CONFIG.uniform.kinds[+b.dataset.i].name;
+    const idx=selUKinds.indexOf(name);
+    if(idx>-1){ selUKinds.splice(idx,1); delete uKindValues[name]; }
+    else { selUKinds.push(name); uKindValues[name]={size:"",qty:""}; }
+    renderUKindGrid();
+    renderUDetailList();
+  }));
+}
+function renderUDetailList(){
+  const box=$("#uDetailList");
+  if(!selUKinds.length){ box.innerHTML=`<p class="hint" style="margin:0;">위에서 신청할 근무복 종류를 선택하세요 (여러 개 선택 가능)</p>`; return; }
+  box.innerHTML = selUKinds.map((name,i)=>{
+    const k=CONFIG.uniform.kinds.find(x=>x.name===name);
+    const v=uKindValues[name]||{size:"",qty:""};
+    return `<div class="udr">
+      <div class="udr-label">${k?k.icon:""} ${esc(name)}</div>
+      <input class="udr-size" data-i="${i}" placeholder="사이즈" value="${esc(v.size)}">
+      <input class="udr-qty" data-i="${i}" type="number" min="1" max="9" inputmode="numeric" placeholder="수량" value="${esc(v.qty)}">
+    </div>`;
+  }).join("");
+  $$("#uDetailList .udr-size").forEach(inp=>inp.addEventListener("input",e=>{
+    uKindValues[selUKinds[+e.target.dataset.i]].size=e.target.value;
+  }));
+  $$("#uDetailList .udr-qty").forEach(inp=>inp.addEventListener("input",e=>{
+    uKindValues[selUKinds[+e.target.dataset.i]].qty=e.target.value;
+  }));
+}
+renderUKindGrid();
+renderUDetailList();
 
 /* 안전화 사진 카드 */
 $("#shoeGrid").innerHTML = CONFIG.shoes.models.map((m,i)=>`
@@ -1019,16 +1096,16 @@ fillOpts("#sSize",CONFIG.shoes.sizes,"사이즈");
 fillOpts("#sQty",["1","2"],"개수");
 $("#busTypeChips").innerHTML = CONFIG.busTypes.map(t=>`<button class="chip" data-t="${t}">${t}</button>`).join("");
 $$("#busTypeChips .chip").forEach(b=>b.addEventListener("click",()=>{
-  $$("#busTypeChips .chip").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on"); selBusType=b.dataset.t;
+  b.classList.toggle("on");
+  selBusTypes = $$("#busTypeChips .chip.on").map(x=>x.dataset.t);
 }));
 
 fillOpts("#lkRoom",CONFIG.locker.rooms,"탈의실 선택");
 $("#lkTypeChips").innerHTML = CONFIG.locker.issueTypes.map((t,i)=>`
   <button class="cat-btn" data-i="${i}"><span class="c-ico">${t.icon}</span>${t.name}</button>`).join("");
 $$("#lkTypeChips .cat-btn").forEach(b=>b.addEventListener("click",()=>{
-  $$("#lkTypeChips .cat-btn").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on"); selLockerType=CONFIG.locker.issueTypes[+b.dataset.i].name;
+  b.classList.toggle("on");
+  selLockerTypes = $$("#lkTypeChips .cat-btn.on").map(x=>CONFIG.locker.issueTypes[+x.dataset.i].name);
 }));
 
 setType("facility");
@@ -1057,13 +1134,12 @@ function fillLocSelects(bSel,fSel,zSel){
 }
 fillLocSelects($("#fBuilding"),$("#fFloor"),$("#fZone"));
 
-/* 분류 버튼 */
+/* 분류 버튼 (중복 선택 가능) */
 $("#catGrid").innerHTML = CONFIG.categories.map((c,i)=>`
   <button class="cat-btn" data-i="${i}"><span class="c-ico">${c.icon}</span>${c.name}</button>`).join("");
 $$("#catGrid .cat-btn").forEach(b=>b.addEventListener("click",()=>{
-  $$("#catGrid .cat-btn").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on");
-  selCat=CONFIG.categories[+b.dataset.i];
+  b.classList.toggle("on");
+  selCats = $$("#catGrid .cat-btn.on").map(x=>CONFIG.categories[+x.dataset.i]);
 }));
 
 /* 사진 */
@@ -1130,19 +1206,19 @@ async function submitComplaint(){
     const building=$("#fBuilding").value, zone=$("#fZone").value;
     if(!building) return toast("건물을 선택해 주세요");
     if(!zone) return toast("구역을 선택해 주세요");
-    if(!selCat) return toast("문제 분류를 선택해 주세요");
+    if(!selCats.length) return toast("문제 분류를 선택해 주세요");
     if(!content) return toast("상세 내용을 입력해 주세요");
     Object.assign(c,{building, floor:$("#fFloor").value, zone, detail:$("#fDetail").value.trim(),
-      category:selCat.name});
+      category:selCats.map(x=>x.name).join(", ")});
   }
   else if(selType==="uniform"){
-    const size=$("#uSize").value.trim(), qty=$("#uQty").value.trim();
-    if(!selUKind) return toast("근무복 분류를 선택해 주세요");
-    if(!size) return toast("사이즈를 입력해 주세요");
-    if(!qty||+qty<1) return toast("개수를 입력해 주세요");
+    if(!selUKinds.length) return toast("근무복 분류를 선택해 주세요 (여러 개 선택 가능)");
     if(!contact) return toast("수령을 위해 부서와 이름을 입력해 주세요");
+    const items=selUKinds.map(name=>({kind:name, size:(uKindValues[name].size||"").trim(), qty:(uKindValues[name].qty||"").trim()}));
+    const bad=items.find(it=>!it.size || !it.qty || +it.qty<1);
+    if(bad) return toast(`"${bad.kind}"의 사이즈와 수량을 입력해 주세요`);
     c.category="근무복 신청";
-    c.item={kind:selUKind,size,qty};
+    c.item=items;
   }
   else if(selType==="shoes"){
     const size=$("#sSize").value, qty=$("#sQty").value;
@@ -1157,16 +1233,16 @@ async function submitComplaint(){
     const room=$("#lkRoom").value, number=$("#lkNumber").value.trim();
     if(!room) return toast("탈의실 구분을 선택해 주세요");
     if(!number) return toast("락커 번호를 입력해 주세요");
-    if(!selLockerType) return toast("요청 유형을 선택해 주세요");
+    if(!selLockerTypes.length) return toast("요청 유형을 선택해 주세요 (여러 개 선택 가능)");
     if(!content) return toast("상세 내용을 입력해 주세요");
     c.category="탈의실 락커";
-    c.item={kind:selLockerType, room, number};
+    c.item={kind:selLockerTypes.join(", "), room, number};
   }
   else if(selType==="bus"){
-    if(!selBusType) return toast("통근버스 접수 유형을 선택해 주세요");
+    if(!selBusTypes.length) return toast("통근버스 접수 유형을 선택해 주세요 (여러 개 선택 가능)");
     if(!content) return toast("상세 내용을 입력해 주세요");
     c.category="통근버스";
-    c.item={kind:selBusType, route:$("#busRoute").value.trim()};
+    c.item={kind:selBusTypes.join(", "), route:$("#busRoute").value.trim()};
   }
 
   const btn=$("#submitBtn");
@@ -1194,9 +1270,10 @@ async function submitComplaint(){
   $("#fPrivacy").checked=false; $("#fPrivacy").dispatchEvent(new Event("change"));
   $("#busRoute").value="";
   $("#lkNumber").value=""; $("#lkRoom").value="";
-  $("#uSize").value=""; $("#uQty").value=""; $("#sSize").value=""; $("#sQty").value="";
+  $("#sSize").value=""; $("#sQty").value="";
   $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn,#lkTypeChips .cat-btn").forEach(x=>x.classList.remove("on"));
-  selCat=null; selBusType=null; selUKind=null; selShoe=null; selLockerType=null; photos=[]; renderPhotos();
+  selCats=[]; selBusTypes=[]; selUKinds=[]; uKindValues={}; selShoe=null; selLockerTypes=[]; photos=[]; renderPhotos();
+  renderUDetailList();
   setType("facility");
 
   $("#doneNo").textContent=c.id;
@@ -1475,6 +1552,213 @@ async function admDelete(id){
   $("#admModal").classList.remove("show"); renderAdmin(); toast("삭제했어요");
 }
 
+/* ================================================================
+   식단표
+   ================================================================ */
+const MENU_KEY = "cafeteria_menu_v1";
+const MEAL_ICONS = { "조식":"🌅", "중식":"🍚", "석식":"🌙", "야식":"🌃" };
+const DOW_KO = ["일","월","화","수","목","금","토"];
+let menuData = null;      // 화면에 표시 중인 식단
+let menuDayIdx = 0;       // 선택된 요일 index
+let menuDraft = null;     // 관리자 미리보기(저장 전) 데이터
+
+async function loadMenu(){
+  if(API.on()){
+    try{
+      const r = await API.get({action:"getMenu"});
+      if(r.result==="success" && r.menu) return r.menu;
+    }catch(e){ /* 실패 시 로컬 폴백 */ }
+  }
+  try{ return JSON.parse(localStorage.getItem(MENU_KEY)||"null"); }
+  catch(e){ return null; }
+}
+async function saveMenu(menu){
+  localStorage.setItem(MENU_KEY, JSON.stringify(menu));
+  if(API.on()){
+    const r = await API.post({action:"saveMenu", token:adminToken, menu});
+    if(r.result!=="success") throw new Error(r.message||"저장 실패");
+  }
+}
+
+/* ---- 엑셀 파싱 ---------------------------------------------------
+   영양사 양식 기준: MON~SUN 헤더행 아래에 날짜행,
+   왼쪽 라벨열(조식/중식/PLUS/석식/야식)로 구간이 나뉘고
+   빈 줄로 구간이 구분됩니다. 열/행 위치가 조금 달라져도 찾아냅니다. */
+const DOW_KEYS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+function parseMenuWorkbook(wb){
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if(!ws) throw new Error("시트를 읽을 수 없습니다");
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, blankrows:true});
+  const txt = v => (v===null||v===undefined) ? "" : String(v).replace(/\s+/g," ").trim();
+
+  /* 1) 요일 헤더행 찾기 */
+  let hdrRow=-1, dayCols=[];
+  for(let r=0;r<rows.length;r++){
+    const found=[];
+    (rows[r]||[]).forEach((v,ci)=>{
+      const u=txt(v).toUpperCase();
+      const i=DOW_KEYS.indexOf(u);
+      if(i>-1 && !found.some(f=>f.i===i)) found.push({i,ci});
+    });
+    if(found.length>=5){ found.sort((a,b)=>a.i-b.i); hdrRow=r; dayCols=found.map(f=>f.ci); break; }
+  }
+  if(hdrRow<0) throw new Error("MON~SUN 요일 행을 찾지 못했습니다. 양식을 확인해 주세요.");
+
+  /* 2) 날짜행 찾기 (요일행 바로 아래 3줄 이내) */
+  let dates=[], dateRow=-1;
+  for(let r=hdrRow+1;r<Math.min(hdrRow+4,rows.length);r++){
+    const ds = dayCols.map(ci=>{
+      const v=(rows[r]||[])[ci];
+      if(v instanceof Date) return v;
+      const s=txt(v); if(!s) return null;
+      const d=new Date(s); return isNaN(d)?null:d;
+    });
+    if(ds.filter(Boolean).length>=5){ dates=ds; dateRow=r; break; }
+  }
+  const iso = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` : "";
+  /* 날짜가 없으면 월요일 기준으로 추정 */
+  if(!dates.length){
+    const base=new Date(); base.setDate(base.getDate()-((base.getDay()+6)%7));
+    dates = dayCols.map((_,i)=>{ const d=new Date(base); d.setDate(d.getDate()+i); return d; });
+  }
+
+  /* 3) 라벨열 찾기 — 요일열 왼쪽 중 글자가 가장 많은 열 */
+  const firstDay = Math.min(...dayCols);
+  let labelCol=0, best=-1;
+  for(let c=0;c<firstDay;c++){
+    let n=0;
+    for(let r=(dateRow<0?hdrRow:dateRow)+1;r<rows.length;r++) if(txt((rows[r]||[])[c])) n++;
+    if(n>best){ best=n; labelCol=c; }
+  }
+
+  /* 4) 구간별로 메뉴 수집 */
+  const sections=[], notes=[];
+  let cur=null;
+  for(let r=(dateRow<0?hdrRow:dateRow)+1;r<rows.length;r++){
+    const row=rows[r]||[];
+    const label=txt(row[labelCol]);
+    const cells=dayCols.map(ci=>txt(row[ci]));
+    if(label.startsWith("*") || label.startsWith("※")){ notes.push(label); continue; }
+    if(label){ cur={name:label, items:dayCols.map(()=>[])}; sections.push(cur); }
+    if(!cur) continue;
+    cells.forEach((v,i)=>{ if(v) cur.items[i].push(v); });
+  }
+  const clean = sections.filter(s=>s.items.some(a=>a.length));
+  if(!clean.length) throw new Error("메뉴 내용을 찾지 못했습니다. 양식을 확인해 주세요.");
+
+  return { weekStart: iso(dates[0]), dates: dates.map(iso), sections: clean, notes, updatedAt: new Date().toISOString() };
+}
+
+/* ---- 사용자 화면 ---- */
+function todayIdxOf(menu){
+  const t=new Date(); t.setHours(0,0,0,0);
+  const i=menu.dates.findIndex(d=>{ const x=new Date(d); x.setHours(0,0,0,0); return +x===+t; });
+  return i;
+}
+async function renderMenu(){
+  const body=$("#menuBody"), chips=$("#menuDayChips");
+  /* 캐시된 식단이 이번 주가 아니면 다시 불러오기 */
+  if(menuData && todayIdxOf(menuData)<0) menuData=null;
+  if(!menuData){
+    $("#menuWeekLabel").textContent="불러오는 중...";
+    menuData = await loadMenu();
+    const ti = menuData ? todayIdxOf(menuData) : -1;
+    menuDayIdx = ti>-1 ? ti : 0;
+  }
+  if(!menuData){
+    $("#menuWeekLabel").textContent="";
+    chips.innerHTML="";
+    body.innerHTML=`<div class="card"><p class="empty">아직 등록된 식단표가 없어요.<br>관리자 화면에서 엑셀 파일을 올려주세요.</p></div>`;
+    return;
+  }
+  const m=menuData, todayI=todayIdxOf(m);
+  const f=s=>{ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+  $("#menuWeekLabel").textContent=`${f(m.dates[0])} ~ ${f(m.dates[m.dates.length-1])} 식단`;
+
+  chips.innerHTML=m.dates.map((d,i)=>{
+    const dt=new Date(d);
+    return `<button class="day-chip ${i===menuDayIdx?'on':''} ${i===todayI?'today':''}" data-i="${i}">
+      ${DOW_KO[dt.getDay()]}<b>${dt.getDate()}</b></button>`;
+  }).join("");
+  $$("#menuDayChips .day-chip").forEach(b=>b.addEventListener("click",()=>{
+    menuDayIdx=+b.dataset.i; renderMenu();
+  }));
+
+  /* PLUS 구간은 바로 위 식사에 붙여서 표시 */
+  let html="", open=false;
+  m.sections.forEach(s=>{
+    const items=s.items[menuDayIdx]||[];
+    const isPlus=/^PLUS$/i.test(s.name);
+    if(isPlus){
+      if(!items.length) return;
+      const inner=`<div class="meal-plus"><span class="mp-tag">PLUS</span>
+        <ul>${items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
+      if(open){ html+=inner; } else { html+=`<div class="meal-card">${inner}</div>`; }
+      return;
+    }
+    if(open){ html+=`</div>`; open=false; }
+    if(!items.length) return;
+    html+=`<div class="meal-card"><h4>${MEAL_ICONS[s.name]||"🍽"} ${esc(s.name)}</h4>
+      <ul>${items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+    open=true;
+  });
+  if(open) html+=`</div>`;
+  if(!html) html=`<div class="card"><p class="empty">이 날은 등록된 메뉴가 없어요.</p></div>`;
+  if(m.notes&&m.notes.length){
+    html+=`<div class="card"><div class="menu-notes">${m.notes.map(esc).join("<br>")}</div></div>`;
+  }
+  body.innerHTML=html;
+}
+
+/* ---- 관리자: 업로드 → 미리보기 → 저장 ---- */
+$("#menuFile").addEventListener("change", async e=>{
+  const file=e.target.files[0]; e.target.value="";
+  if(!file) return;
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:"array", cellDates:true});
+    menuDraft=parseMenuWorkbook(wb);
+    renderMenuPreview();
+    toast("식단표를 읽었어요. 내용을 확인해 주세요");
+  }catch(err){
+    $("#menuPreview").innerHTML=`<p class="hint" style="color:var(--red);">읽기 실패: ${esc(err.message)}</p>`;
+  }
+});
+function renderMenuPreview(){
+  const box=$("#menuPreview");
+  if(!menuDraft){ box.innerHTML=""; return; }
+  const m=menuDraft;
+  const f=s=>{ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}(${DOW_KO[d.getDay()]})`; };
+  box.innerHTML=`
+    <p class="hint" style="margin:0 0 8px;">📅 <b>${f(m.dates[0])} ~ ${f(m.dates[m.dates.length-1])}</b> · 칸을 눌러 직접 수정할 수 있어요 (한 줄에 메뉴 하나)</p>
+    <div class="mp-scroll"><table class="mp-table">
+      <thead><tr><th class="mp-sec"></th>${m.dates.map(d=>`<th>${f(d)}</th>`).join("")}</tr></thead>
+      <tbody>${m.sections.map((s,si)=>`<tr>
+        <td class="mp-sec">${esc(s.name)}</td>
+        ${s.items.map((items,di)=>`<td><textarea data-s="${si}" data-d="${di}">${esc(items.join("\n"))}</textarea></td>`).join("")}
+      </tr>`).join("")}</tbody>
+    </table></div>
+    <button class="btn btn-amber btn-block" style="margin-top:12px;" onclick="commitMenu()">✅ 이 내용으로 저장</button>`;
+  $$("#menuPreview textarea").forEach(t=>t.addEventListener("input",e=>{
+    const s=+e.target.dataset.s, d=+e.target.dataset.d;
+    menuDraft.sections[s].items[d]=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);
+  }));
+}
+async function commitMenu(){
+  if(!menuDraft) return;
+  menuDraft.updatedAt=new Date().toISOString();
+  try{
+    await saveMenu(menuDraft);
+    menuData=menuDraft;
+    const ti=todayIdxOf(menuData); menuDayIdx=ti>-1?ti:0;
+    menuDraft=null;
+    $("#menuPreview").innerHTML=`<p class="hint" style="color:var(--green);">✅ 저장되었습니다. 식단표 화면에서 확인해 보세요.</p>`;
+    toast("식단표가 저장되었어요");
+  }catch(err){
+    toast("저장 실패: "+err.message);
+  }
+}
+
 /* QR 생성기 */
 function makeQR(){
   const b=$("#qBuilding").value; if(!b) return toast("건물을 선택해 주세요");
@@ -1491,7 +1775,11 @@ function makeQR(){
 function exportCSV(){
   const list=adminCache;
   const typeName=c=>(CONFIG.types.find(t=>t.key===(c.type||"facility"))||{}).name||"시설 불편신고";
-  const itemStr=c=>c.item?[c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route,c.item.room,c.item.number?c.item.number+"번":""].filter(Boolean).join(" / "):"";
+  const itemStr=c=>{
+    if(!c.item) return "";
+    if(Array.isArray(c.item)) return c.item.map(it=>`${it.kind} ${it.size}×${it.qty}개`).join(" / ");
+    return [c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route,c.item.room,c.item.number?c.item.number+"번":""].filter(Boolean).join(" / ");
+  };
   const head=["접수번호","접수유형","접수일시","건물","층","구역","상세위치","신청내역","분류","상태","담당자","내용","처리내용","완료일시","만족도","연락처"];
   const rows=list.map(c=>[c.id,typeName(c),c.createdAt,c.building,c.floor,c.zone,c.detail,itemStr(c),c.category,STATUS[c.status],c.assignee,c.content,c.resultNote,c.completedAt||"",c.rating||"",c.contact]
     .map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(","));
@@ -1546,7 +1834,7 @@ function seedDemo(){
     ["facility","사무동","3층","회의실","대회의실","냉난방","에어컨에서 이상한 소리가 나요",3,null],
     ["facility","휴게시설","1층","휴게실","","전기","정수기가 작동하지 않아요",0,null],
     ["facility","옥외화장실(냉동콤프)","1층","화장실(여)","","청소/위생","청소 상태가 좋지 않아요",2,null],
-    ["uniform","","","","","근무복 신청","",3,{kind:"하계 상의",size:"100",qty:"1"}],
+    ["uniform","","","","","근무복 신청","",3,[{kind:"하계 상의",size:"100",qty:"1"},{kind:"하계 하의",size:"32",qty:"1"}]],
     ["shoes","","","","","안전화 신청","",1,{kind:"ZB-142",size:"265mm",qty:"1"}],
     ["bus","","","","","통근버스","아침 2호차가 자주 늦게 도착합니다",2,{kind:"운행시간",route:"2호차"}],
     ["locker","","","","","탈의실 락커","락커 문이 뻑뻑해서 잘 안 열려요",1,{kind:"파손/고장",room:"임직원 탈의실",number:"152"}]

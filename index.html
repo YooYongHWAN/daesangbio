@@ -4,6 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>임직원 통합 접수창구</title>
+
+<!-- 홈 화면 추가 시 표시될 아이콘 (iOS/안드로이드 공통) -->
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e131b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="접수창구">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
@@ -755,7 +769,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbzi6-RqxbKgr4pDdH6DYSycBi2gER9FMZiM5FZwe9d2dSy9hWR5H9IXlX7e_MbrMzTY2Q/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzu2Hb_17pz9U-UGmtv-oiIkUDxqZQojO5Q5uVlG6WrGq2Ze8N0HkW-J9QlRWIB4amFWA/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -1454,6 +1468,10 @@ async function renderAdmin(){
   } else {
     adminCache = DB.load();
   }
+  renderAdminList();
+}
+/* 네트워크 재조회 없이 캐시(adminCache)만으로 목록을 다시 그립니다 */
+function renderAdminList(){
   let list=[...adminCache].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   if(adminFilter!=="all") list=list.filter(c=>c.status===+adminFilter);
   $("#adminList").innerHTML = list.length ? list.map(c=>{
@@ -1503,20 +1521,38 @@ function openAdm(id){
     </div>`;
   $("#admModal").classList.add("show");
 }
+/* 모달을 통째로 다시 그리지 않고 상태 버튼 하이라이트만 갱신 (담당자/처리내용 입력 중인 내용 보존) */
+function highlightStatusBtns(st){
+  $$("#admModalBody .status-btns button").forEach((b,i)=>b.classList.toggle("on", i===st));
+}
 async function admStatus(id,st){
+  const item=adminCache.find(x=>x.id===id);
+  if(!item) return;
+  const prevStatus=item.status, prevCompleted=item.completedAt;
+
+  /* 낙관적 업데이트: 서버 응답을 기다리지 않고 화면부터 즉시 반영 */
+  item.status=st;
+  item.completedAt = st===3 ? new Date().toISOString() : null;
+  renderAdminList();
+  highlightStatusBtns(st);
+
   if(API.on()){
     try{
       const r=await API.post({action:"updateStatus", token:adminToken, id, status:st});
       if(r.result!=="success") throw new Error(r.message||"실패");
-    }catch(err){ return toast("상태 변경에 실패했어요"); }
+    }catch(err){
+      /* 실패 시 원래 상태로 되돌리기 */
+      item.status=prevStatus; item.completedAt=prevCompleted;
+      renderAdminList(); highlightStatusBtns(prevStatus);
+      return toast("상태 변경에 실패했어요");
+    }
   } else {
     const list=DB.load(); const c=list.find(x=>x.id===id); if(!c) return;
     c.status=st;
     c.history.push({status:st, at:new Date().toISOString()});
-    c.completedAt = st===3 ? new Date().toISOString() : null;
+    c.completedAt = item.completedAt;
     DB.save(list);
   }
-  await renderAdmin(); openAdm(id);
 }
 async function admSave(id){
   const assignee=$("#admAssignee").value.trim();

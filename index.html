@@ -755,7 +755,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbxxfRVdkoOAMBhUYdPb5torQKbXVzw1hoOtleXfatSerkPg_dHO2c3ZPfqMXyhmofCJYg/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzu2Hb_17pz9U-UGmtv-oiIkUDxqZQojO5Q5uVlG6WrGq2Ze8N0HkW-J9QlRWIB4amFWA/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -1558,6 +1558,11 @@ async function admDelete(id){
 const MENU_KEY = "cafeteria_menu_v1";
 const MEAL_ICONS = { "조식":"🌅", "중식":"🍚", "석식":"🌙", "야식":"🌃" };
 const DOW_KO = ["일","월","화","수","목","금","토"];
+/* "2026-07-27" → 로컬 자정 Date. new Date(문자열)은 UTC로 해석돼 하루가 밀릴 수 있습니다 */
+function dISO(s){
+  const p=String(s).split("-").map(Number);
+  return new Date(p[0], (p[1]||1)-1, p[2]||1);
+}
 let menuData = null;      // 화면에 표시 중인 식단
 let menuDayIdx = 0;       // 선택된 요일 index
 let menuDraft = null;     // 관리자 미리보기(저장 전) 데이터
@@ -1585,6 +1590,20 @@ async function saveMenu(menu){
    왼쪽 라벨열(조식/중식/PLUS/석식/야식)로 구간이 나뉘고
    빈 줄로 구간이 구분됩니다. 열/행 위치가 조금 달라져도 찾아냅니다. */
 const DOW_KEYS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+/* 엑셀 날짜를 시간대 영향 없이 변환합니다.
+   (SheetJS가 만든 Date를 그대로 쓰면 UTC+9인 한국에서 하루씩 밀립니다) */
+function toLocalDate(v){
+  if(v===null||v===undefined||v==="") return null;
+  if(typeof v==="number"){                       // 엑셀 일련번호 (46230 = 2026-07-27)
+    const d=new Date(Math.round((v-25569)*86400000));
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  if(v instanceof Date){                         // UTC 기준으로 만들어진 Date 보정
+    return new Date(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
+  }
+  const d=new Date(String(v).trim());
+  return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 function parseMenuWorkbook(wb){
   const ws = wb.Sheets[wb.SheetNames[0]];
   if(!ws) throw new Error("시트를 읽을 수 없습니다");
@@ -1607,12 +1626,7 @@ function parseMenuWorkbook(wb){
   /* 2) 날짜행 찾기 (요일행 바로 아래 3줄 이내) */
   let dates=[], dateRow=-1;
   for(let r=hdrRow+1;r<Math.min(hdrRow+4,rows.length);r++){
-    const ds = dayCols.map(ci=>{
-      const v=(rows[r]||[])[ci];
-      if(v instanceof Date) return v;
-      const s=txt(v); if(!s) return null;
-      const d=new Date(s); return isNaN(d)?null:d;
-    });
+    const ds = dayCols.map(ci=>toLocalDate((rows[r]||[])[ci]));
     if(ds.filter(Boolean).length>=5){ dates=ds; dateRow=r; break; }
   }
   const iso = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` : "";
@@ -1652,7 +1666,7 @@ function parseMenuWorkbook(wb){
 /* ---- 사용자 화면 ---- */
 function todayIdxOf(menu){
   const t=new Date(); t.setHours(0,0,0,0);
-  const i=menu.dates.findIndex(d=>{ const x=new Date(d); x.setHours(0,0,0,0); return +x===+t; });
+  const i=menu.dates.findIndex(d=>+dISO(d)===+t);
   return i;
 }
 async function renderMenu(){
@@ -1672,11 +1686,11 @@ async function renderMenu(){
     return;
   }
   const m=menuData, todayI=todayIdxOf(m);
-  const f=s=>{ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+  const f=s=>{ const d=dISO(s); return `${d.getMonth()+1}/${d.getDate()}`; };
   $("#menuWeekLabel").textContent=`${f(m.dates[0])} ~ ${f(m.dates[m.dates.length-1])} 식단`;
 
   chips.innerHTML=m.dates.map((d,i)=>{
-    const dt=new Date(d);
+    const dt=dISO(d);
     return `<button class="day-chip ${i===menuDayIdx?'on':''} ${i===todayI?'today':''}" data-i="${i}">
       ${DOW_KO[dt.getDay()]}<b>${dt.getDate()}</b></button>`;
   }).join("");
@@ -1716,7 +1730,7 @@ $("#menuFile").addEventListener("change", async e=>{
   if(!file) return;
   try{
     const buf=await file.arrayBuffer();
-    const wb=XLSX.read(buf,{type:"array", cellDates:true});
+    const wb=XLSX.read(buf,{type:"array"});
     menuDraft=parseMenuWorkbook(wb);
     renderMenuPreview();
     toast("식단표를 읽었어요. 내용을 확인해 주세요");
@@ -1728,7 +1742,7 @@ function renderMenuPreview(){
   const box=$("#menuPreview");
   if(!menuDraft){ box.innerHTML=""; return; }
   const m=menuDraft;
-  const f=s=>{ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}(${DOW_KO[d.getDay()]})`; };
+  const f=s=>{ const d=dISO(s); return `${d.getMonth()+1}/${d.getDate()}(${DOW_KO[d.getDay()]})`; };
   box.innerHTML=`
     <p class="hint" style="margin:0 0 8px;">📅 <b>${f(m.dates[0])} ~ ${f(m.dates[m.dates.length-1])}</b> · 칸을 눌러 직접 수정할 수 있어요 (한 줄에 메뉴 하나)</p>
     <div class="mp-scroll"><table class="mp-table">

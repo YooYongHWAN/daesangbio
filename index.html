@@ -62,6 +62,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber);}
 textarea{resize:vertical;min-height:96px;}
 select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238d9ab4' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;}
 input[type="date"],input[type="time"]{min-height:44px;line-height:20px;}
+/* iOS 사파리에서 날짜 입력값이 한쪽으로 쏠리지 않도록 정렬 */
+input[type="date"]{-webkit-appearance:none;appearance:none;text-align:center;}
+input[type="date"]::-webkit-date-and-time-value{text-align:center;margin:0;}
 
 /* ---------- header ---------- */
 .topbar{
@@ -301,6 +304,8 @@ input[type="date"],input[type="time"]{min-height:44px;line-height:20px;}
 .vt-sel{position:absolute;top:0;bottom:0;background:rgba(255,176,32,.28);border-left:2px solid var(--amber);border-right:2px solid var(--amber);pointer-events:none;}
 .vt-ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px;padding:0 1px;}
 .vt-empty{font-size:12px;color:var(--dim);margin-top:8px;}
+.vt-daylabel{font-size:11.5px;font-weight:700;color:var(--dim);margin:10px 0 3px;}
+.v-timeline .vt-bar + .vt-daylabel{margin-top:10px;}
 .vt-legend{display:flex;gap:12px;font-size:11px;color:var(--dim);margin-top:8px;}
 .vt-legend span{display:flex;align-items:center;gap:5px;}
 .vt-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
@@ -601,7 +606,11 @@ input[type="date"],input[type="time"]{min-height:44px;line-height:20px;}
   <div class="card sec-vehicle" style="display:none;">
     <h3><span class="step-no">STEP 2</span> 예약 정보</h3>
     <div class="item-notice" id="vehicleNotice" style="display:block;"></div>
-    <div class="field"><label>사용 날짜 <b>*</b></label><input type="date" id="vDate"></div>
+    <div class="row2">
+      <div class="field"><label>시작 날짜 <b>*</b></label><input type="date" id="vDate" class="date-input"></div>
+      <div class="field"><label>종료 날짜 <b>*</b></label><input type="date" id="vDateEnd" class="date-input"></div>
+    </div>
+    <p class="hint" style="margin:-4px 0 0;">하루만 사용하면 시작·종료 날짜를 같게 두세요. 2일 이상도 가능해요.</p>
     <div class="field"><label>용도 <b>*</b></label>
       <div class="chips" id="vPurposeChips">
         <button type="button" class="chip" data-t="업무">업무용</button>
@@ -843,7 +852,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbxxsNkz6GslT4nrlrL5vc8ngY-YZUd8pxjE3znAX1vyno4wKs4bqgJnbBo1c0Ko3KjC/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzzilMnIL7D11NxFBVtIpgeADneOpJMsgxHGrGMV2vLBT9ZJQaGxlKrfAU4aGAFnxuCKQ/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -1015,7 +1024,12 @@ function locStr(c){
   if(t==="shoes") return `${esc(c.item.kind)} ${esc(c.item.size)} × ${esc(c.item.qty)}개`;
   if(t==="bus") return `통근버스 · ${esc(c.item.kind)}${c.item.route?` · ${esc(c.item.route)}`:""}`;
   if(t==="locker") return `${esc(c.item.room)} 락커 ${esc(c.item.number)}번 · ${esc(c.item.kind)}`;
-  if(t==="vehicle") return `${esc(c.item.date)} ${esc(c.item.start)}~${esc(c.item.end)} · ${esc(c.item.purpose)}용`;
+  if(t==="vehicle"){
+    const multi = c.item.dateEnd && c.item.dateEnd!==c.item.date;
+    return multi
+      ? `${esc(c.item.date)} ${esc(c.item.start)} ~ ${esc(c.item.dateEnd)} ${esc(c.item.end)} · ${esc(c.item.purpose)}용`
+      : `${esc(c.item.date)} ${esc(c.item.start)}~${esc(c.item.end)} · ${esc(c.item.purpose)}용`;
+  }
   return [c.building, c.floor!=="해당없음"?c.floor:"", c.zone, c.detail].filter(Boolean).map(esc).join(" · ");
 }
 function typeIco(c){
@@ -1212,7 +1226,15 @@ $$("#lkTypeChips .cat-btn").forEach(b=>b.addEventListener("click",()=>{
 
 /* 법인차량 예약 */
 let selVPurpose=null;
-$("#vDate").min = new Date().toISOString().slice(0,10);
+const _todayISO = new Date().toISOString().slice(0,10);
+$("#vDate").min = _todayISO;
+$("#vDateEnd").min = _todayISO;
+/* 시작 날짜를 고르면 종료 날짜의 최소값도 같이 맞추고, 종료가 더 이르면 자동 보정 */
+$("#vDate").addEventListener("change", ()=>{
+  const sd=$("#vDate").value;
+  if(sd){ $("#vDateEnd").min = sd; if(!$("#vDateEnd").value || $("#vDateEnd").value < sd) $("#vDateEnd").value = sd; }
+  renderVehicleAvailability();
+});
 $("#vehicleNotice").innerHTML = `🔑 <b>차량 이용 안내</b><br>` +
   CONFIG.vehicle.guide.map((g,i)=>`${i+1}. ${esc(g)}`).join("<br>");
 $$("#vPurposeChips .chip").forEach(b=>b.addEventListener("click",()=>{
@@ -1258,49 +1280,78 @@ function setupWheelPicker(wrapId, hiddenId){
 const vStartWheel = setupWheelPicker("vStartWheel","vStart");
 const vEndWheel   = setupWheelPicker("vEndWheel","vEnd");
 const timeMin = t => { const [h,m]=String(t||"0:0").split(":").map(Number); return h*60+m; };
-/* 같은 날짜에 겹치는 기존 예약이 있는지 확인 */
-async function findVehicleConflict(date, start, end){
-  if(!date || !start || !end) return null;
+/* 예약을 "절대 분(分)" 구간으로 환산 — 여러 날에 걸친 예약도 비교 가능 */
+function resvRange(item){
+  const sd=item.date, ed=item.dateEnd || item.date;
+  const dayNum = d => Math.floor(new Date(d+"T00:00:00").getTime()/86400000);
+  const s = dayNum(sd)*1440 + timeMin(item.start);
+  const e = dayNum(ed)*1440 + timeMin(item.end);
+  return {s, e};
+}
+/* 겹치는 기존 예약이 있는지 확인 (여러 날 예약 포함) */
+async function findVehicleConflict(sd, ed, start, end){
+  if(!sd || !ed || !start || !end) return null;
   const list = await fetchAllList();
-  const s=timeMin(start), e=timeMin(end);
+  const me = resvRange({date:sd, dateEnd:ed, start, end});
   return list.find(c=>{
-    if(c.type!=="vehicle" || !c.item || c.item.date!==date) return false;
-    const cs=timeMin(c.item.start), ce=timeMin(c.item.end);
-    return s<ce && e>cs;
+    if(c.type!=="vehicle" || !c.item) return false;
+    const r = resvRange(c.item);
+    return me.s < r.e && me.e > r.s;
   }) || null;
 }
-/* 예약된 시간대를 하루 타임라인 막대로 시각화 (겹치는 시간을 한눈에 확인) */
+/* 선택한 날짜 범위에 걸친 예약을 날짜별 타임라인 막대로 시각화 */
 async function renderVehicleAvailability(){
-  const date=$("#vDate").value, box=$("#vTimeline");
-  if(!date){ box.innerHTML=""; return; }
+  const sd=$("#vDate").value, ed=$("#vDateEnd").value || sd, box=$("#vTimeline");
+  if(!sd){ box.innerHTML=""; return; }
   box.innerHTML=`<p class="vt-empty">예약 현황 확인 중...</p>`;
   const list=await fetchAllList();
-  const todays=list.filter(c=>c.type==="vehicle" && c.item && c.item.date===date)
-    .sort((a,b)=>timeMin(a.item.start)-timeMin(b.item.start));
+  const start=$("#vStart").value, end=$("#vEnd").value;
+
+  /* 표시할 날짜 목록 (시작~종료) */
+  const days=[]; let d=new Date(sd+"T00:00:00"); const last=new Date(ed+"T00:00:00");
+  while(d<=last && days.length<14){ days.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
 
   const pct = m => (m/1440*100).toFixed(2);
-  const segs = todays.map(c=>{
-    const s=timeMin(c.item.start), e=timeMin(c.item.end);
-    return `<div class="vt-seg" style="left:${pct(s)}%;width:${pct(e-s)}%;" title="${esc(c.item.start)}~${esc(c.item.end)} (${esc(c.item.purpose)}용)">
-      <span>${esc(c.item.start)}~${esc(c.item.end)}</span></div>`;
+  const dowKo = ["일","월","화","수","목","금","토"];
+  let anyResv=false;
+
+  const rows = days.map(day=>{
+    /* 이 날짜에 걸치는 모든 예약 → 이 날의 00:00~24:00 기준으로 잘라서 표시 */
+    const segs = list.filter(c=>c.type==="vehicle" && c.item).map(c=>{
+      const ci=c.item, cEnd=ci.dateEnd||ci.date;
+      if(day < ci.date || day > cEnd) return "";
+      const s = day===ci.date ? timeMin(ci.start) : 0;
+      const e = day===cEnd ? timeMin(ci.end) : 1440;
+      if(e<=s) return "";
+      anyResv=true;
+      return `<div class="vt-seg" style="left:${pct(s)}%;width:${pct(e-s)}%;" title="${esc(ci.start)}~${esc(ci.end)} (${esc(ci.purpose)}용)"><span>${esc(ci.start)}~${esc(ci.end)}</span></div>`;
+    }).join("");
+
+    /* 내가 지금 선택 중인 구간을 이 날짜에 겹쳐 표시 */
+    let sel="";
+    if(start && end){
+      const ss = day===sd ? timeMin(start) : 0;
+      const ee = day===ed ? timeMin(end) : 1440;
+      const within = day>=sd && day<=ed;
+      if(within && ee>ss) sel=`<div class="vt-sel" style="left:${pct(ss)}%;width:${pct(ee-ss)}%;"></div>`;
+    }
+    const dObj=new Date(day+"T00:00:00");
+    const label = days.length>1 ? `<div class="vt-daylabel">${dObj.getMonth()+1}/${dObj.getDate()}(${dowKo[dObj.getDay()]})</div>` : "";
+    return `${label}<div class="vt-bar">${segs}${sel}</div>`;
   }).join("");
 
-  const start=$("#vStart").value, end=$("#vEnd").value;
-  const sel = (start && end && timeMin(end)>timeMin(start))
-    ? `<div class="vt-sel" style="left:${pct(timeMin(start))}%;width:${pct(timeMin(end)-timeMin(start))}%;"></div>` : "";
-
   box.innerHTML = `
-    <div class="vt-bar">${segs}${sel}</div>
+    ${rows}
     <div class="vt-ticks"><span>00시</span><span>06시</span><span>12시</span><span>18시</span><span>24시</span></div>
     <div class="vt-legend">
       <span><i style="background:rgba(248,113,113,.6);"></i>예약된 시간</span>
-      ${sel?`<span><i style="background:rgba(255,176,32,.6);"></i>내가 선택한 시간</span>`:""}
+      ${(start&&end)?`<span><i style="background:rgba(255,176,32,.6);"></i>내가 선택한 시간</span>`:""}
     </div>
-    ${todays.length?"":`<p class="vt-empty">📅 이 날은 아직 예약이 없어요</p>`}`;
+    ${anyResv?"":`<p class="vt-empty">📅 선택한 기간에는 아직 예약이 없어요</p>`}`;
 }
 $("#vStart").addEventListener("change", renderVehicleAvailability);
 $("#vEnd").addEventListener("change", renderVehicleAvailability);
-$("#vDate").addEventListener("change", renderVehicleAvailability);
+$("#vDateEnd").addEventListener("change", renderVehicleAvailability);
 
 setType("facility");
 
@@ -1443,16 +1494,25 @@ async function submitComplaint(){
     c.item={kind:selBusTypes.join(", "), route:$("#busRoute").value.trim()};
   }
   else if(selType==="vehicle"){
-    const date=$("#vDate").value, start=$("#vStart").value, end=$("#vEnd").value;
-    if(!date) return toast("사용 날짜를 선택해 주세요");
+    const date=$("#vDate").value, dateEnd=$("#vDateEnd").value||date, start=$("#vStart").value, end=$("#vEnd").value;
+    if(!date) return toast("시작 날짜를 선택해 주세요");
+    if(!dateEnd) return toast("종료 날짜를 선택해 주세요");
+    if(dateEnd < date) return toast("종료 날짜는 시작 날짜보다 빠를 수 없어요");
     if(!selVPurpose) return toast("용도를 선택해 주세요");
     if(!start || !end) return toast("시작·종료 시간을 선택해 주세요");
-    if(timeMin(end)<=timeMin(start)) return toast("종료 시간은 시작 시간보다 늦어야 해요");
+    /* 같은 날 예약이면 종료 시간이 시작보다 늦어야 함 (여러 날이면 시간 역전 허용) */
+    if(date===dateEnd && timeMin(end)<=timeMin(start)) return toast("종료 시간은 시작 시간보다 늦어야 해요");
     if(!contact) return toast("부서와 이름을 입력해 주세요");
-    const conflict = await findVehicleConflict(date, start, end);
-    if(conflict) return toast(`이미 ${conflict.item.start}~${conflict.item.end}에 예약이 있어요. 다른 시간을 선택해 주세요`);
+    const conflict = await findVehicleConflict(date, dateEnd, start, end);
+    if(conflict){
+      const ci=conflict.item;
+      const range = ci.dateEnd && ci.dateEnd!==ci.date
+        ? `${ci.date} ${ci.start} ~ ${ci.dateEnd} ${ci.end}`
+        : `${ci.date} ${ci.start}~${ci.end}`;
+      return toast(`이미 ${range}에 예약이 있어요. 다른 시간을 선택해 주세요`);
+    }
     c.category="법인차량 예약";
-    c.item={date, start, end, purpose:selVPurpose};
+    c.item={date, dateEnd, start, end, purpose:selVPurpose};
   }
 
   const btn=$("#submitBtn");
@@ -1481,7 +1541,7 @@ async function submitComplaint(){
   $("#busRoute").value="";
   $("#lkNumber").value=""; $("#lkRoom").value="";
   $("#sSize").value=""; $("#sQty").value="";
-  $("#vDate").value=""; vStartWheel.reset(); vEndWheel.reset(); $("#vTimeline").innerHTML="";
+  $("#vDate").value=""; $("#vDateEnd").value=""; vStartWheel.reset(); vEndWheel.reset(); $("#vTimeline").innerHTML="";
   $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn,#lkTypeChips .cat-btn,#vPurposeChips .chip").forEach(x=>x.classList.remove("on"));
   selCats=[]; selBusTypes=[]; selUKinds=[]; uKindValues={}; selShoe=null; selLockerTypes=[]; selVPurpose=null; photos=[]; renderPhotos();
   renderUDetailList();
@@ -2025,7 +2085,7 @@ function exportCSV(){
   const itemStr=c=>{
     if(!c.item) return "";
     if(Array.isArray(c.item)) return c.item.map(it=>`${it.kind} ${it.size}×${it.qty}개`).join(" / ");
-    return [c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route,c.item.room,c.item.number?c.item.number+"번":"",c.item.date,c.item.start,c.item.end,c.item.purpose?c.item.purpose+"용":""].filter(Boolean).join(" / ");
+    return [c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route,c.item.room,c.item.number?c.item.number+"번":"",c.item.date,c.item.dateEnd&&c.item.dateEnd!==c.item.date?"~"+c.item.dateEnd:"",c.item.start,c.item.end,c.item.purpose?c.item.purpose+"용":""].filter(Boolean).join(" / ");
   };
   const head=["접수번호","접수유형","접수일시","건물","층","구역","상세위치","신청내역","분류","상태","담당자","내용","처리내용","완료일시","만족도","연락처"];
   const rows=list.map(c=>[c.id,typeName(c),c.createdAt,c.building,c.floor,c.zone,c.detail,itemStr(c),c.category,STATUS[c.status],c.assignee,c.content,c.resultNote,c.completedAt||"",c.rating||"",c.contact]
@@ -2085,7 +2145,7 @@ function seedDemo(){
     ["shoes","","","","","안전화 신청","",1,{kind:"ZB-142",size:"265mm",qty:"1"}],
     ["bus","","","","","통근버스","아침 2호차가 자주 늦게 도착합니다",2,{kind:"운행시간",route:"2호차"}],
     ["locker","","","","","탈의실 락커","락커 문이 뻑뻑해서 잘 안 열려요",1,{kind:"파손/고장",room:"임직원 탈의실",number:"152"}],
-    ["vehicle","","","","","법인차량 예약","",0,{date:new Date().toISOString().slice(0,10),start:"09:00",end:"11:00",purpose:"업무"}]
+    ["vehicle","","","","","법인차량 예약","",0,{date:new Date().toISOString().slice(0,10),dateEnd:new Date().toISOString().slice(0,10),start:"09:00",end:"11:00",purpose:"업무"}]
   ];
   for(let i=0;i<22;i++){
     const s=samples[i%samples.length];

@@ -61,6 +61,7 @@ input,select,textarea{
 input:focus,select:focus,textarea:focus{border-color:var(--amber);}
 textarea{resize:vertical;min-height:96px;}
 select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238d9ab4' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 14px center;}
+input[type="date"],input[type="time"]{min-height:44px;line-height:20px;}
 
 /* ---------- header ---------- */
 .topbar{
@@ -110,7 +111,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   font-size:10.5px;font-weight:500;transition:.15s;
 }
-.bottom-nav button .ico{font-size:20px;line-height:1;}
+.bottom-nav button .ico{font-size:20px;line-height:1;height:22px;display:flex;align-items:center;justify-content:center;}
 .bottom-nav button.active{color:var(--amber);font-weight:700;}
 
 /* ---------- layout ---------- */
@@ -600,13 +601,11 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <div class="card sec-vehicle" style="display:none;">
     <h3><span class="step-no">STEP 2</span> 예약 정보</h3>
     <div class="item-notice" id="vehicleNotice" style="display:block;"></div>
-    <div class="row2">
-      <div class="field"><label>사용 날짜 <b>*</b></label><input type="date" id="vDate"></div>
-      <div class="field"><label>용도 <b>*</b></label>
-        <div class="chips" id="vPurposeChips">
-          <button type="button" class="chip" data-t="업무">업무용</button>
-          <button type="button" class="chip" data-t="개인">개인용</button>
-        </div>
+    <div class="field"><label>사용 날짜 <b>*</b></label><input type="date" id="vDate"></div>
+    <div class="field"><label>용도 <b>*</b></label>
+      <div class="chips" id="vPurposeChips">
+        <button type="button" class="chip" data-t="업무">업무용</button>
+        <button type="button" class="chip" data-t="개인">개인용</button>
       </div>
     </div>
     <div class="row2">
@@ -844,7 +843,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbzu2Hb_17pz9U-UGmtv-oiIkUDxqZQojO5Q5uVlG6WrGq2Ze8N0HkW-J9QlRWIB4amFWA/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbxxsNkz6GslT4nrlrL5vc8ngY-YZUd8pxjE3znAX1vyno4wKs4bqgJnbBo1c0Ko3KjC/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",

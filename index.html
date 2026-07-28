@@ -291,6 +291,33 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
 .mp-table th.mp-sec{width:66px;}
 .mp-table td.mp-sec{font-size:12.5px;font-weight:800;color:var(--amber);white-space:nowrap;vertical-align:middle;}
 .mp-table textarea{width:150px;min-height:104px;font-size:12px;line-height:1.45;padding:8px;resize:vertical;}
+
+/* 차량예약 시간대 타임라인 */
+.v-timeline{margin-top:14px;}
+.vt-bar{position:relative;height:30px;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.vt-seg{position:absolute;top:0;bottom:0;background:rgba(248,113,113,.35);border-left:1px solid var(--red);border-right:1px solid var(--red);}
+.vt-seg span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#fecaca;white-space:nowrap;overflow:hidden;}
+.vt-sel{position:absolute;top:0;bottom:0;background:rgba(255,176,32,.28);border-left:2px solid var(--amber);border-right:2px solid var(--amber);pointer-events:none;}
+.vt-ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px;padding:0 1px;}
+.vt-empty{font-size:12px;color:var(--dim);margin-top:8px;}
+.vt-legend{display:flex;gap:12px;font-size:11px;color:var(--dim);margin-top:8px;}
+.vt-legend span{display:flex;align-items:center;gap:5px;}
+.vt-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+
+/* 스크롤 휠 시간 선택기 */
+.wheel-time{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;
+  height:120px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.wheel-col{height:120px;width:64px;overflow-y:auto;scroll-snap-type:y mandatory;
+  -webkit-overflow-scrolling:touch;text-align:center;scrollbar-width:none;}
+.wheel-col::-webkit-scrollbar{display:none;}
+.wheel-pad{height:40px;}
+.wheel-item{height:40px;line-height:40px;scroll-snap-align:center;font-size:17px;color:var(--dim);
+  font-weight:700;font-family:'Barlow Semi Condensed','Noto Sans KR',sans-serif;transition:color .15s,font-size .15s;}
+.wheel-item.sel{color:var(--amber);font-size:21px;}
+.wheel-sep{font-size:19px;font-weight:800;color:var(--dim);}
+.wheel-highlight{position:absolute;top:50%;left:6px;right:6px;height:40px;transform:translateY(-50%);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);pointer-events:none;
+  border-radius:6px;background:rgba(255,176,32,.06);}
 /* 안전화 사진 카드 */
 .shoe-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 @media(max-width:560px){.shoe-grid{grid-template-columns:1fr;}}
@@ -583,10 +610,26 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
       </div>
     </div>
     <div class="row2">
-      <div class="field"><label>시작 시간 <b>*</b></label><input type="time" id="vStart" step="1800"></div>
-      <div class="field"><label>종료 시간 <b>*</b></label><input type="time" id="vEnd" step="1800"></div>
+      <div class="field"><label>시작 시간 <b>*</b></label>
+        <div class="wheel-time" id="vStartWheel">
+          <div class="wheel-col" data-role="h"></div>
+          <div class="wheel-sep">:</div>
+          <div class="wheel-col" data-role="m"></div>
+          <div class="wheel-highlight"></div>
+        </div>
+        <input type="hidden" id="vStart">
+      </div>
+      <div class="field"><label>종료 시간 <b>*</b></label>
+        <div class="wheel-time" id="vEndWheel">
+          <div class="wheel-col" data-role="h"></div>
+          <div class="wheel-sep">:</div>
+          <div class="wheel-col" data-role="m"></div>
+          <div class="wheel-highlight"></div>
+        </div>
+        <input type="hidden" id="vEnd">
+      </div>
     </div>
-    <div id="vExisting" class="hint" style="margin-top:2px;"></div>
+    <div id="vTimeline" class="v-timeline"></div>
   </div>
 
   <div class="card sec-facility">
@@ -801,7 +844,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbyPNt3GK-ux8zSl22hAO_aseiXW9zudCP6Ah0ViUx-Dj2O0kbtDzOnqbeJVIwaWxYGJsg/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzu2Hb_17pz9U-UGmtv-oiIkUDxqZQojO5Q5uVlG6WrGq2Ze8N0HkW-J9QlRWIB4amFWA/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -1177,6 +1220,44 @@ $$("#vPurposeChips .chip").forEach(b=>b.addEventListener("click",()=>{
   $$("#vPurposeChips .chip").forEach(x=>x.classList.remove("on"));
   b.classList.add("on"); selVPurpose=b.dataset.t;
 }));
+/* 시작/종료 시간을 시/분 스크롤 휠로 선택 (00~23시, 00·30분) */
+const WHEEL_ITEM_H = 40;
+const H_VALUES = Array.from({length:24}, (_,i)=>String(i).padStart(2,"0"));
+const M_VALUES = ["00","30"];
+const buildWheelItems = values => `<div class="wheel-pad"></div>` +
+  values.map(v=>`<div class="wheel-item" data-v="${v}">${v}</div>`).join("") + `<div class="wheel-pad"></div>`;
+
+function setupWheelPicker(wrapId, hiddenId){
+  const wrap=$("#"+wrapId), hidden=$("#"+hiddenId);
+  const hCol=wrap.querySelector('[data-role="h"]'), mCol=wrap.querySelector('[data-role="m"]');
+  hCol.innerHTML=buildWheelItems(H_VALUES);
+  mCol.innerHTML=buildWheelItems(M_VALUES);
+  let hVal=H_VALUES[0], mVal=M_VALUES[0];
+
+  const sync=()=>{ hidden.value=`${hVal}:${mVal}`; hidden.dispatchEvent(new Event("change")); };
+  function bindCol(col, values, isHour){
+    let timer=null;
+    const applyIdx=(idx, jump)=>{
+      idx=Math.max(0, Math.min(values.length-1, idx));
+      col.scrollTo({top: idx*WHEEL_ITEM_H, behavior: jump?"auto":"smooth"});
+      [...col.children].forEach(el=>el.classList.remove("sel"));
+      const el=col.children[idx+1]; if(el) el.classList.add("sel");
+      if(isHour) hVal=values[idx]; else mVal=values[idx];
+      sync();
+    };
+    col.addEventListener("scroll", ()=>{
+      clearTimeout(timer);
+      timer=setTimeout(()=>applyIdx(Math.round(col.scrollTop/WHEEL_ITEM_H), true), 120);
+    });
+    applyIdx(0, true);
+    return applyIdx;
+  }
+  const setH=bindCol(hCol,H_VALUES,true);
+  const setM=bindCol(mCol,M_VALUES,false);
+  return { reset(){ setH(0,true); setM(0,true); } };
+}
+const vStartWheel = setupWheelPicker("vStartWheel","vStart");
+const vEndWheel   = setupWheelPicker("vEndWheel","vEnd");
 const timeMin = t => { const [h,m]=String(t||"0:0").split(":").map(Number); return h*60+m; };
 /* 같은 날짜에 겹치는 기존 예약이 있는지 확인 */
 async function findVehicleConflict(date, start, end){
@@ -1189,28 +1270,37 @@ async function findVehicleConflict(date, start, end){
     return s<ce && e>cs;
   }) || null;
 }
+/* 예약된 시간대를 하루 타임라인 막대로 시각화 (겹치는 시간을 한눈에 확인) */
 async function renderVehicleAvailability(){
-  const date=$("#vDate").value, box=$("#vExisting");
-  if(!date){ box.textContent=""; return; }
-  box.textContent="예약 현황 확인 중...";
+  const date=$("#vDate").value, box=$("#vTimeline");
+  if(!date){ box.innerHTML=""; return; }
+  box.innerHTML=`<p class="vt-empty">예약 현황 확인 중...</p>`;
   const list=await fetchAllList();
   const todays=list.filter(c=>c.type==="vehicle" && c.item && c.item.date===date)
     .sort((a,b)=>timeMin(a.item.start)-timeMin(b.item.start));
-  box.innerHTML = todays.length
-    ? `📅 이 날 예약된 시간: ` + todays.map(c=>esc(`${c.item.start}~${c.item.end}(${c.item.purpose})`)).join(", ")
-    : `📅 이 날은 아직 예약이 없어요`;
+
+  const pct = m => (m/1440*100).toFixed(2);
+  const segs = todays.map(c=>{
+    const s=timeMin(c.item.start), e=timeMin(c.item.end);
+    return `<div class="vt-seg" style="left:${pct(s)}%;width:${pct(e-s)}%;" title="${esc(c.item.start)}~${esc(c.item.end)} (${esc(c.item.purpose)}용)">
+      <span>${esc(c.item.start)}~${esc(c.item.end)}</span></div>`;
+  }).join("");
+
+  const start=$("#vStart").value, end=$("#vEnd").value;
+  const sel = (start && end && timeMin(end)>timeMin(start))
+    ? `<div class="vt-sel" style="left:${pct(timeMin(start))}%;width:${pct(timeMin(end)-timeMin(start))}%;"></div>` : "";
+
+  box.innerHTML = `
+    <div class="vt-bar">${segs}${sel}</div>
+    <div class="vt-ticks"><span>00시</span><span>06시</span><span>12시</span><span>18시</span><span>24시</span></div>
+    <div class="vt-legend">
+      <span><i style="background:rgba(248,113,113,.6);"></i>예약된 시간</span>
+      ${sel?`<span><i style="background:rgba(255,176,32,.6);"></i>내가 선택한 시간</span>`:""}
+    </div>
+    ${todays.length?"":`<p class="vt-empty">📅 이 날은 아직 예약이 없어요</p>`}`;
 }
-/* 시간 입력을 30분 단위로 보정 (일부 모바일 브라우저는 step 속성을 무시하기 때문) */
-function snapToHalfHour(inputEl){
-  if(!inputEl.value) return;
-  const [h,m]=inputEl.value.split(":").map(Number);
-  const snapped=Math.round(m/30)*30;
-  const hh=(h + Math.floor(snapped/60)) % 24;
-  const mm=snapped % 60;
-  inputEl.value = `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
-}
-$("#vStart").addEventListener("change", e=>{ snapToHalfHour(e.target); renderVehicleAvailability(); });
-$("#vEnd").addEventListener("change", e=>{ snapToHalfHour(e.target); renderVehicleAvailability(); });
+$("#vStart").addEventListener("change", renderVehicleAvailability);
+$("#vEnd").addEventListener("change", renderVehicleAvailability);
 $("#vDate").addEventListener("change", renderVehicleAvailability);
 
 setType("facility");
@@ -1392,7 +1482,7 @@ async function submitComplaint(){
   $("#busRoute").value="";
   $("#lkNumber").value=""; $("#lkRoom").value="";
   $("#sSize").value=""; $("#sQty").value="";
-  $("#vDate").value=""; $("#vStart").value=""; $("#vEnd").value=""; $("#vExisting").textContent="";
+  $("#vDate").value=""; vStartWheel.reset(); vEndWheel.reset(); $("#vTimeline").innerHTML="";
   $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn,#lkTypeChips .cat-btn,#vPurposeChips .chip").forEach(x=>x.classList.remove("on"));
   selCats=[]; selBusTypes=[]; selUKinds=[]; uKindValues={}; selShoe=null; selLockerTypes=[]; selVPurpose=null; photos=[]; renderPhotos();
   renderUDetailList();

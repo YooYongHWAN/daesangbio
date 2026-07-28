@@ -474,8 +474,8 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
     <nav class="top-desktop-nav" id="deskNav">
       <button data-v="home">홈</button>
       <button data-v="menu">식단표</button>
-      <button data-v="submit">민원접수</button>
-      <button data-v="track">내 민원</button>
+      <button data-v="submit">통합접수</button>
+      <button data-v="track">내 접수내역</button>
       <button data-v="stats">통계</button>
     </nav>
   </div>
@@ -489,8 +489,8 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
     <h2>불편사항, 바로 접수하세요</h2>
     <p>접수번호로 처리상태를 실시간 확인할 수 있어요</p>
     <div class="hero-actions">
-      <button class="btn btn-amber" onclick="go('submit')">📋 민원 접수하기</button>
-      <button class="btn btn-ghost" onclick="go('track')">🔍 내 민원 조회</button>
+      <button class="btn btn-amber" onclick="go('submit')">📋 통합접수하기</button>
+      <button class="btn btn-ghost" onclick="go('track')">🔍 내 접수내역 조회</button>
     </div>
   </div>
 
@@ -507,9 +507,9 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   </div>
 </section>
 
-<!-- ===== 민원 접수 ===== -->
+<!-- ===== 통합접수 ===== -->
 <section class="view" id="view-submit">
-  <h1 class="page-title">민원 접수</h1>
+  <h1 class="page-title">통합접수</h1>
   <p class="page-sub">아래 항목을 입력하면 접수번호가 발급됩니다</p>
 
   <div class="qr-banner" id="qrBanner">📍 QR코드로 위치가 자동 입력되었어요!</div>
@@ -522,6 +522,9 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <!-- 근무복 신청 -->
   <div class="card sec-uniform" style="display:none;">
     <h3><span class="step-no">STEP 2</span> 근무복 요청 정보</h3>
+    <div class="item-notice" style="display:block;">
+      ⚠️ 근무복 신청의 경우 본사 정책 상 훼손, 마모된 것에 한해 교환해드립니다.
+    </div>
     <div class="field"><label>근무복 분류 <b>*</b> <span style="font-weight:400;">— 중복 선택 가능</span></label>
       <div class="kind-grid" id="uKindGrid"></div>
     </div>
@@ -531,6 +534,9 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <!-- 안전화 신청 -->
   <div class="card sec-shoes" style="display:none;">
     <h3><span class="step-no">STEP 2</span> 안전화 신청 정보</h3>
+    <div class="item-notice" style="display:block;">
+      ⚠️ 노후화된 안전화를 촬영하여 신청해주세요.
+    </div>
     <div class="field"><label>안전화 모델 선택 <b>*</b> <span style="font-weight:400;">— 사진을 참고해 선택하세요</span></label>
       <div class="shoe-grid" id="shoeGrid"></div>
     </div>
@@ -561,6 +567,26 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
     <div class="field"><label>요청 유형 <b>*</b> <span style="font-weight:400;">— 중복 선택 가능</span></label>
       <div class="cat-grid" id="lkTypeChips"></div>
     </div>
+  </div>
+
+  <!-- 법인차량 예약 -->
+  <div class="card sec-vehicle" style="display:none;">
+    <h3><span class="step-no">STEP 2</span> 예약 정보</h3>
+    <div class="item-notice" id="vehicleNotice" style="display:block;"></div>
+    <div class="row2">
+      <div class="field"><label>사용 날짜 <b>*</b></label><input type="date" id="vDate"></div>
+      <div class="field"><label>용도 <b>*</b></label>
+        <div class="chips" id="vPurposeChips">
+          <button type="button" class="chip" data-t="업무">업무용</button>
+          <button type="button" class="chip" data-t="개인">개인용</button>
+        </div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>시작 시간 <b>*</b></label><input type="time" id="vStart" step="1800"></div>
+      <div class="field"><label>종료 시간 <b>*</b></label><input type="time" id="vEnd" step="1800"></div>
+    </div>
+    <div id="vExisting" class="hint" style="margin-top:2px;"></div>
   </div>
 
   <div class="card sec-facility">
@@ -611,8 +637,8 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
         <input type="checkbox" id="fPrivacy">
         <div class="pb-text">
           <b>개인정보 수집·이용에 동의합니다.</b>
-          <span>수집항목: 이름·연락처 / 목적: 민원 처리 및 결과 안내 / 보유기간: 처리 완료 후 1년<br>
-          동의를 거부할 권리가 있으나 미동의 시 민원 접수가 제한될 수 있습니다.</span>
+          <span>수집항목: 이름·연락처 / 목적: 접수 처리 및 결과 안내 / 보유기간: 처리 완료 후 1년<br>
+          동의를 거부할 권리가 있으나 미동의 시 접수가 제한될 수 있습니다.</span>
         </div>
       </label>
     </div>
@@ -622,9 +648,9 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <button class="btn btn-amber btn-block" id="submitBtn" onclick="submitComplaint()">✅ 접수하기</button>
 </section>
 
-<!-- ===== 내 민원 조회 ===== -->
+<!-- ===== 내 접수내역 조회 ===== -->
 <section class="view" id="view-track">
-  <h1 class="page-title">내 민원 조회</h1>
+  <h1 class="page-title">내 접수내역 조회</h1>
   <p class="page-sub">접수번호를 입력하면 처리상태를 확인할 수 있어요</p>
 
   <div class="card">
@@ -637,7 +663,7 @@ select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=
   <div id="trackResult"></div>
 
   <div class="card">
-    <h3>📱 이 기기에서 접수한 민원</h3>
+    <h3>📱 이 기기에서 접수한 내역</h3>
     <div id="myList"></div>
   </div>
 </section>
@@ -775,7 +801,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbyxbviksYNAerKh_PfO21CU9LUzOorlf8LjWbUl0duFQJx5Ih5x4O85uqIG6zkeBJCDVw/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbyPNt3GK-ux8zSl22hAO_aseiXW9zudCP6Ah0ViUx-Dj2O0kbtDzOnqbeJVIwaWxYGJsg/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -826,7 +852,8 @@ const CONFIG = {
     { key:"locker",   icon:"🔒", name:"탈의실 락커",   desc:"파손·위치변경·위생 등" },
     { key:"uniform",  icon:"👕", name:"근무복 신청",   desc:"사이즈·수량 선택" },
     { key:"shoes",    icon:"🥾", name:"안전화 신청",   desc:"모델·사이즈 선택" },
-    { key:"bus",      icon:"🚌", name:"통근버스",      desc:"운행·노선 관련 접수" }
+    { key:"bus",      icon:"🚌", name:"통근버스",      desc:"운행·노선 관련 접수" },
+    { key:"vehicle",  icon:"🚚", name:"법인차량 예약", desc:"봉고3 트럭 날짜·시간 예약" }
   ],
   // 근무복 신청 옵션
   uniform: {
@@ -869,6 +896,15 @@ const CONFIG = {
       { name:"냄새/위생 문제", icon:"🧼" },
       { name:"열쇠 분실",      icon:"🔑" },
       { name:"기타",           icon:"📌" }
+    ]
+  },
+  // 법인차량 예약
+  vehicle: {
+    name:"봉고3 트럭",
+    guide:[
+      "차량 사용 시 경비실에서 키를 수령해 주세요",
+      "개인 목적으로 사용한 경우, 사용한 만큼 주유해 주세요",
+      "사용 후에는 반드시 차량 일지를 작성해 주세요"
     ]
   }
 };
@@ -937,6 +973,7 @@ function locStr(c){
   if(t==="shoes") return `${esc(c.item.kind)} ${esc(c.item.size)} × ${esc(c.item.qty)}개`;
   if(t==="bus") return `통근버스 · ${esc(c.item.kind)}${c.item.route?` · ${esc(c.item.route)}`:""}`;
   if(t==="locker") return `${esc(c.item.room)} 락커 ${esc(c.item.number)}번 · ${esc(c.item.kind)}`;
+  if(t==="vehicle") return `${esc(c.item.date)} ${esc(c.item.start)}~${esc(c.item.end)} · ${esc(c.item.purpose)}용`;
   return [c.building, c.floor!=="해당없음"?c.floor:"", c.zone, c.detail].filter(Boolean).map(esc).join(" · ");
 }
 function typeIco(c){
@@ -1017,7 +1054,7 @@ async function renderHome(){
       <span class="f-ico">${typeIco(c)}</span>
       <div class="f-main"><b>${locStr(c)} — ${esc(c.category)}</b><span>${fmtDate(c.createdAt)} 접수</span></div>
       <span class="badge b-${c.status}">${STATUS[c.status]}</span>
-    </div>`).join("") : `<p class="empty">아직 접수된 민원이 없어요</p>`;
+    </div>`).join("") : `<p class="empty">아직 접수된 내역이 없어요</p>`;
 }
 
 /* ================================================================
@@ -1039,6 +1076,7 @@ function setType(k){
   show(".sec-uniform",  k==="uniform");
   show(".sec-shoes",    k==="shoes");
   show(".sec-bus",      k==="bus");
+  show(".sec-vehicle",  k==="vehicle");
   /* 상세내용 카드: 물품 신청 시 숨김 */
   const isItem = k==="uniform"||k==="shoes";
   show(".sec-not-item", !isItem);
@@ -1049,6 +1087,8 @@ function setType(k){
     ? "어떤 불편이 있었는지 알려주세요.\n예: 아침 2호차가 10분 이상 늦게 도착합니다."
     : k==="locker"
     ? "어떤 문제가 있는지 자세히 알려주세요.\n예: 문이 뻑뻑해서 잘 안 열려요. / 습기 때문에 냄새가 나요."
+    : k==="vehicle"
+    ? "추가로 전달할 내용이 있으면 적어주세요 (선택)\n예: 짐칸에 물건 3박스 실을 예정입니다."
     : "어떤 문제가 있는지 자세히 알려주세요.\n예: 사무동 2층 남자화장실 문 잠금장치가 고장났습니다.";
   renumberSteps();
 }
@@ -1127,6 +1167,51 @@ $$("#lkTypeChips .cat-btn").forEach(b=>b.addEventListener("click",()=>{
   b.classList.toggle("on");
   selLockerTypes = $$("#lkTypeChips .cat-btn.on").map(x=>CONFIG.locker.issueTypes[+x.dataset.i].name);
 }));
+
+/* 법인차량 예약 */
+let selVPurpose=null;
+$("#vDate").min = new Date().toISOString().slice(0,10);
+$("#vehicleNotice").innerHTML = `🔑 <b>차량 이용 안내</b><br>` +
+  CONFIG.vehicle.guide.map((g,i)=>`${i+1}. ${esc(g)}`).join("<br>");
+$$("#vPurposeChips .chip").forEach(b=>b.addEventListener("click",()=>{
+  $$("#vPurposeChips .chip").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); selVPurpose=b.dataset.t;
+}));
+const timeMin = t => { const [h,m]=String(t||"0:0").split(":").map(Number); return h*60+m; };
+/* 같은 날짜에 겹치는 기존 예약이 있는지 확인 */
+async function findVehicleConflict(date, start, end){
+  if(!date || !start || !end) return null;
+  const list = await fetchAllList();
+  const s=timeMin(start), e=timeMin(end);
+  return list.find(c=>{
+    if(c.type!=="vehicle" || !c.item || c.item.date!==date) return false;
+    const cs=timeMin(c.item.start), ce=timeMin(c.item.end);
+    return s<ce && e>cs;
+  }) || null;
+}
+async function renderVehicleAvailability(){
+  const date=$("#vDate").value, box=$("#vExisting");
+  if(!date){ box.textContent=""; return; }
+  box.textContent="예약 현황 확인 중...";
+  const list=await fetchAllList();
+  const todays=list.filter(c=>c.type==="vehicle" && c.item && c.item.date===date)
+    .sort((a,b)=>timeMin(a.item.start)-timeMin(b.item.start));
+  box.innerHTML = todays.length
+    ? `📅 이 날 예약된 시간: ` + todays.map(c=>esc(`${c.item.start}~${c.item.end}(${c.item.purpose})`)).join(", ")
+    : `📅 이 날은 아직 예약이 없어요`;
+}
+/* 시간 입력을 30분 단위로 보정 (일부 모바일 브라우저는 step 속성을 무시하기 때문) */
+function snapToHalfHour(inputEl){
+  if(!inputEl.value) return;
+  const [h,m]=inputEl.value.split(":").map(Number);
+  const snapped=Math.round(m/30)*30;
+  const hh=(h + Math.floor(snapped/60)) % 24;
+  const mm=snapped % 60;
+  inputEl.value = `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
+}
+$("#vStart").addEventListener("change", e=>{ snapToHalfHour(e.target); renderVehicleAvailability(); });
+$("#vEnd").addEventListener("change", e=>{ snapToHalfHour(e.target); renderVehicleAvailability(); });
+$("#vDate").addEventListener("change", renderVehicleAvailability);
 
 setType("facility");
 
@@ -1268,6 +1353,18 @@ async function submitComplaint(){
     c.category="통근버스";
     c.item={kind:selBusTypes.join(", "), route:$("#busRoute").value.trim()};
   }
+  else if(selType==="vehicle"){
+    const date=$("#vDate").value, start=$("#vStart").value, end=$("#vEnd").value;
+    if(!date) return toast("사용 날짜를 선택해 주세요");
+    if(!selVPurpose) return toast("용도를 선택해 주세요");
+    if(!start || !end) return toast("시작·종료 시간을 선택해 주세요");
+    if(timeMin(end)<=timeMin(start)) return toast("종료 시간은 시작 시간보다 늦어야 해요");
+    if(!contact) return toast("부서와 이름을 입력해 주세요");
+    const conflict = await findVehicleConflict(date, start, end);
+    if(conflict) return toast(`이미 ${conflict.item.start}~${conflict.item.end}에 예약이 있어요. 다른 시간을 선택해 주세요`);
+    c.category="법인차량 예약";
+    c.item={date, start, end, purpose:selVPurpose};
+  }
 
   const btn=$("#submitBtn");
   btn.disabled=true; btn.textContent="⏳ 접수 처리 중...";
@@ -1295,8 +1392,9 @@ async function submitComplaint(){
   $("#busRoute").value="";
   $("#lkNumber").value=""; $("#lkRoom").value="";
   $("#sSize").value=""; $("#sQty").value="";
-  $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn,#lkTypeChips .cat-btn").forEach(x=>x.classList.remove("on"));
-  selCats=[]; selBusTypes=[]; selUKinds=[]; uKindValues={}; selShoe=null; selLockerTypes=[]; photos=[]; renderPhotos();
+  $("#vDate").value=""; $("#vStart").value=""; $("#vEnd").value=""; $("#vExisting").textContent="";
+  $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn,#lkTypeChips .cat-btn,#vPurposeChips .chip").forEach(x=>x.classList.remove("on"));
+  selCats=[]; selBusTypes=[]; selUKinds=[]; uKindValues={}; selShoe=null; selLockerTypes=[]; selVPurpose=null; photos=[]; renderPhotos();
   renderUDetailList();
   setType("facility");
 
@@ -1306,7 +1404,7 @@ async function submitComplaint(){
 function closeDone(){ $("#doneModal").classList.remove("show"); }
 
 /* ================================================================
-   내 민원 조회
+   내 접수내역 조회
    ================================================================ */
 async function trackSearch(id){
   const q=(id || $("#trackInput").value).trim();
@@ -1336,7 +1434,7 @@ async function trackSearch(id){
         </div>`).join("")}
     </div>
     <div class="detail-rows">
-      <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":c.type==="locker"?"락커 정보":"위치"}</b><div>${locStr(c)}</div></div>
+      <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":c.type==="locker"?"락커 정보":c.type==="vehicle"?"예약 정보":"위치"}</b><div>${locStr(c)}</div></div>
       <div class="drow"><b>분류</b><div>${esc(c.category)}${c.assignee?` (담당: ${esc(c.assignee)})`:""}</div></div>
       <div class="drow"><b>접수일시</b><div>${fmtDate(c.createdAt)}</div></div>
       ${c.content?`<div class="drow"><b>내용</b><div>${esc(c.content)}</div></div>`:""}
@@ -1372,7 +1470,7 @@ async function rate(id,n){
 async function renderMyList(){
   const mine=DB.mine();
   const box=$("#myList");
-  if(!mine.length){ box.innerHTML=`<p class="empty">이 기기에서 접수한 민원이 없어요</p>`; return; }
+  if(!mine.length){ box.innerHTML=`<p class="empty">이 기기에서 접수한 내역이 없어요</p>`; return; }
 
   let items=[];
   if(API.on()){
@@ -1388,7 +1486,7 @@ async function renderMyList(){
       <span class="num" style="font-weight:800;">${c.id}</span>
       <b>${locStr(c)}</b>
       <span class="badge b-${c.status}">${STATUS[c.status]}</span>
-    </button>`).join("") : `<p class="empty">이 기기에서 접수한 민원이 없어요</p>`;
+    </button>`).join("") : `<p class="empty">이 기기에서 접수한 내역이 없어요</p>`;
 }
 
 /* ================================================================
@@ -1493,7 +1591,7 @@ function renderAdminList(){
       <div class="ai-title">${typeIco(c)} [${esc(c.category)}] ${locStr(c)}</div>
       <div class="ai-meta">${fmtDate(c.createdAt)}${c.assignee?` · 담당 ${esc(c.assignee)}`:""}${c.photos.length?` · 📷${c.photos.length}`:""}${c.rating?` · ⭐${c.rating}`:""}</div>
     </button>`;
-  }).join("") : `<p class="empty">해당하는 민원이 없어요</p>`;
+  }).join("") : `<p class="empty">해당하는 접수 내역이 없어요</p>`;
 }
 function openAdm(id){
   const c=adminCache.find(x=>x.id===id); if(!c) return;
@@ -1503,7 +1601,7 @@ function openAdm(id){
       <button class="btn btn-ghost btn-sm" onclick="$('#admModal').classList.remove('show')">닫기 ✕</button>
     </div>
     <div class="detail-rows" style="border-top:none;margin-top:0;">
-      <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":c.type==="locker"?"락커 정보":"위치"}</b><div>${locStr(c)}</div></div>
+      <div class="drow"><b>${(c.type==="uniform"||c.type==="shoes")?"신청내역":c.type==="bus"?"접수내역":c.type==="locker"?"락커 정보":c.type==="vehicle"?"예약 정보":"위치"}</b><div>${locStr(c)}</div></div>
       <div class="drow"><b>분류</b><div>${esc(c.category)}</div></div>
       <div class="drow"><b>접수자</b><div>${esc(c.contact)||"-"}</div></div>
       ${c.content?`<div class="drow"><b>내용</b><div>${esc(c.content)}</div></div>`:""}
@@ -1518,7 +1616,7 @@ function openAdm(id){
     <div class="field"><label>담당자</label>
       <input id="admAssignee" value="${esc(c.assignee)}" placeholder="예: 설비팀 김반장">
     </div>
-    <div class="field"><label>처리 내용 (완료 시 민원인에게 표시)</label>
+    <div class="field"><label>처리 내용 (완료 시 접수자에게 표시)</label>
       <textarea id="admNote" placeholder="예: 잠금장치 교체 완료했습니다.">${esc(c.resultNote)}</textarea>
     </div>
     <div class="field"><label>완료 사진</label>
@@ -1589,7 +1687,7 @@ async function admSave(id){
   $("#admModal").classList.remove("show"); await renderAdmin();
 }
 async function admDelete(id){
-  if(!confirm(id+" 민원을 삭제할까요?")) return;
+  if(!confirm(id+" 접수 건을 삭제할까요?")) return;
   if(API.on()){
     toast("구글시트에서 직접 해당 행을 삭제해 주세요 (앱에서는 지원하지 않아요)");
     return;
@@ -1838,12 +1936,12 @@ function exportCSV(){
   const itemStr=c=>{
     if(!c.item) return "";
     if(Array.isArray(c.item)) return c.item.map(it=>`${it.kind} ${it.size}×${it.qty}개`).join(" / ");
-    return [c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route,c.item.room,c.item.number?c.item.number+"번":""].filter(Boolean).join(" / ");
+    return [c.item.kind,c.item.size,c.item.qty?c.item.qty+"개":"",c.item.route,c.item.room,c.item.number?c.item.number+"번":"",c.item.date,c.item.start,c.item.end,c.item.purpose?c.item.purpose+"용":""].filter(Boolean).join(" / ");
   };
   const head=["접수번호","접수유형","접수일시","건물","층","구역","상세위치","신청내역","분류","상태","담당자","내용","처리내용","완료일시","만족도","연락처"];
   const rows=list.map(c=>[c.id,typeName(c),c.createdAt,c.building,c.floor,c.zone,c.detail,itemStr(c),c.category,STATUS[c.status],c.assignee,c.content,c.resultNote,c.completedAt||"",c.rating||"",c.contact]
     .map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(","));
-  download("\uFEFF"+[head.join(","),...rows].join("\n"), `민원목록_${new Date().toISOString().slice(0,10)}.csv`, "text/csv");
+  download("\uFEFF"+[head.join(","),...rows].join("\n"), `접수목록_${new Date().toISOString().slice(0,10)}.csv`, "text/csv");
 }
 function exportJSON(){
   if(API.on()) return toast("구글시트가 원본 데이터예요. 시트 파일 자체를 백업해 주세요");
@@ -1875,7 +1973,7 @@ function changePw(){
 }
 function wipeAll(){
   if(API.on()) return toast("구글시트 연동 중에는 시트에서 직접 행을 삭제해 주세요");
-  if(!confirm("모든 민원 데이터를 삭제할까요? 되돌릴 수 없습니다.")) return;
+  if(!confirm("모든 접수 데이터를 삭제할까요? 되돌릴 수 없습니다.")) return;
   if(!confirm("정말 삭제하시겠어요? 백업(JSON)을 먼저 받아두는 것을 권장합니다.")) return;
   localStorage.removeItem(DB.key); renderAdmin(); toast("전체 삭제 완료");
 }
@@ -1897,7 +1995,8 @@ function seedDemo(){
     ["uniform","","","","","근무복 신청","",3,[{kind:"하계 상의",size:"100",qty:"1"},{kind:"하계 하의",size:"32",qty:"1"}]],
     ["shoes","","","","","안전화 신청","",1,{kind:"ZB-142",size:"265mm",qty:"1"}],
     ["bus","","","","","통근버스","아침 2호차가 자주 늦게 도착합니다",2,{kind:"운행시간",route:"2호차"}],
-    ["locker","","","","","탈의실 락커","락커 문이 뻑뻑해서 잘 안 열려요",1,{kind:"파손/고장",room:"임직원 탈의실",number:"152"}]
+    ["locker","","","","","탈의실 락커","락커 문이 뻑뻑해서 잘 안 열려요",1,{kind:"파손/고장",room:"임직원 탈의실",number:"152"}],
+    ["vehicle","","","","","법인차량 예약","",0,{date:new Date().toISOString().slice(0,10),start:"09:00",end:"11:00",purpose:"업무"}]
   ];
   for(let i=0;i<22;i++){
     const s=samples[i%samples.length];

@@ -289,6 +289,17 @@ input[type="date"]::-webkit-date-and-time-value{text-align:center;margin:0;}
 .meal-plus .mp-tag{display:inline-block;font-size:10.5px;font-weight:800;color:var(--amber);
   background:var(--amber-dim);border-radius:5px;padding:2px 6px;margin-bottom:6px;}
 .menu-notes{font-size:12px;color:var(--dim);line-height:1.6;margin-top:6px;}
+/* 홈 - 오늘의 식단 (2x2 그리드) */
+.hm-date{font-size:12px;color:var(--dim);font-weight:600;margin:2px 0 12px;}
+.hm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:400px){.hm-grid{grid-template-columns:1fr;}}
+.hm-meal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px;}
+.hm-meal h5{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--amber);margin-bottom:8px;}
+.hm-meal ul{list-style:none;display:flex;flex-direction:column;gap:4px;}
+.hm-meal li{font-size:12.5px;line-height:1.4;color:var(--text);padding-left:11px;position:relative;}
+.hm-meal li::before{content:"·";position:absolute;left:2px;color:var(--dim);font-weight:900;}
+.hm-meal .hm-plus{margin-top:7px;padding-top:6px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--dim);}
+.hm-empty{font-size:13px;color:var(--dim);padding:6px 0;}
 /* 관리자 식단 미리보기 */
 .mp-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px;}
 .mp-table{border-collapse:separate;border-spacing:6px;min-width:760px;}
@@ -581,6 +592,14 @@ input[type="date"]::-webkit-date-and-time-value{text-align:center;margin:0;}
       <button class="link-more" onclick="go('community')">전체보기 ›</button>
     </div>
     <div id="homeNotice"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+      <h3 style="margin:0;">🍽 오늘의 식단</h3>
+      <button class="link-more" onclick="go('menu')">주간 식단 ›</button>
+    </div>
+    <div id="homeMenu"></div>
   </div>
 
   <div class="kpi-grid" id="homeKpi"></div>
@@ -1206,6 +1225,9 @@ async function renderHome(){
   /* 최신 공지 3개 (커뮤니티 연동) */
   $("#homeNotice").innerHTML=`<p class="ntc-empty">불러오는 중...</p>`;
   loadNotices().then(ns=>{ noticeData=ns; renderHomeNotices(); bindVoteButtons(); });
+
+  /* 오늘의 식단 */
+  renderHomeMenu();
 
   const recent=[...list].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,6);
   $("#homeFeed").innerHTML = recent.length ? recent.map(c=>`
@@ -2410,6 +2432,45 @@ function todayIdxOf(menu){
   const t=new Date(); t.setHours(0,0,0,0);
   const i=menu.dates.findIndex(d=>+dISO(d)===+t);
   return i;
+}
+/* 홈 화면 - 오늘 하루 식단만 2x2 타일로 간결하게 */
+async function renderHomeMenu(){
+  const box=$("#homeMenu");
+  if(!box) return;
+  box.innerHTML=`<p class="hm-empty">불러오는 중...</p>`;
+  if(!menuData || todayIdxOf(menuData)<0){ menuData = await loadMenu(); }
+  if(!menuData){
+    box.innerHTML=`<p class="hm-empty">아직 등록된 식단표가 없어요.</p>`;
+    return;
+  }
+  const m=menuData, idx=todayIdxOf(m);
+  if(idx<0){
+    box.innerHTML=`<p class="hm-empty">오늘(${new Date().getMonth()+1}/${new Date().getDate()}) 식단은 등록되지 않았어요.</p>`;
+    return;
+  }
+  const dt=dISO(m.dates[idx]);
+  /* 끼니별로 묶기 (PLUS는 바로 앞 끼니에 부가로 붙임) */
+  const meals=[]; let cur=null;
+  m.sections.forEach(s=>{
+    const items=s.items[idx]||[];
+    if(/^PLUS$/i.test(s.name)){
+      if(cur && items.length) cur.plus=(cur.plus||[]).concat(items);
+      return;
+    }
+    cur={name:s.name, items};
+    meals.push(cur);
+  });
+  const withItems=meals.filter(mm=>mm.items.length || (mm.plus&&mm.plus.length));
+  $("#homeMenu").innerHTML =
+    `<div class="hm-date">📅 ${m.dates[idx].replace(/-/g,".")} (${DOW_KO[dt.getDay()]})</div>` +
+    (withItems.length
+      ? `<div class="hm-grid">` + withItems.map(mm=>`
+          <div class="hm-meal">
+            <h5>${MEAL_ICONS[mm.name]||"🍽"} ${esc(mm.name)}</h5>
+            <ul>${mm.items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+            ${mm.plus&&mm.plus.length?`<div class="hm-plus">＋ ${mm.plus.map(esc).join(", ")}</div>`:""}
+          </div>`).join("") + `</div>`
+      : `<p class="hm-empty">오늘은 등록된 메뉴가 없어요.</p>`);
 }
 async function renderMenu(){
   const body=$("#menuBody"), chips=$("#menuDayChips");

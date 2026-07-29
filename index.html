@@ -302,6 +302,8 @@ input[type="date"]::-webkit-date-and-time-value{text-align:center;margin:0;}
 .vt-seg{position:absolute;top:0;bottom:0;background:rgba(248,113,113,.35);border-left:1px solid var(--red);border-right:1px solid var(--red);}
 .vt-seg span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#fecaca;white-space:nowrap;overflow:hidden;}
 .vt-sel{position:absolute;top:0;bottom:0;background:rgba(255,176,32,.28);border-left:2px solid var(--amber);border-right:2px solid var(--amber);pointer-events:none;}
+.vt-sel span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:var(--amber);white-space:nowrap;overflow:hidden;}
+.vt-warn{font-size:12px;color:var(--red);font-weight:600;margin-top:8px;}
 .vt-ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px;padding:0 1px;}
 .vt-empty{font-size:12px;color:var(--dim);margin-top:8px;}
 .vt-daylabel{font-size:11.5px;font-weight:700;color:var(--dim);margin:10px 0 3px;}
@@ -852,7 +854,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbzzilMnIL7D11NxFBVtIpgeADneOpJMsgxHGrGMV2vLBT9ZJQaGxlKrfAU4aGAFnxuCKQ/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzu2Hb_17pz9U-UGmtv-oiIkUDxqZQojO5Q5uVlG6WrGq2Ze8N0HkW-J9QlRWIB4amFWA/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -1226,6 +1228,7 @@ $$("#lkTypeChips .cat-btn").forEach(b=>b.addEventListener("click",()=>{
 
 /* 법인차량 예약 */
 let selVPurpose=null;
+let _vehicleListCache=null, _vehicleCacheAt=0;
 const _todayISO = new Date().toISOString().slice(0,10);
 $("#vDate").min = _todayISO;
 $("#vDateEnd").min = _todayISO;
@@ -1233,6 +1236,7 @@ $("#vDateEnd").min = _todayISO;
 $("#vDate").addEventListener("change", ()=>{
   const sd=$("#vDate").value;
   if(sd){ $("#vDateEnd").min = sd; if(!$("#vDateEnd").value || $("#vDateEnd").value < sd) $("#vDateEnd").value = sd; }
+  _vehicleListCache=null; /* 날짜 바꾸면 최신 예약 다시 조회 */
   renderVehicleAvailability();
 });
 $("#vehicleNotice").innerHTML = `🔑 <b>차량 이용 안내</b><br>` +
@@ -1255,7 +1259,12 @@ function setupWheelPicker(wrapId, hiddenId){
   mCol.innerHTML=buildWheelItems(M_VALUES);
   let hVal=H_VALUES[0], mVal=M_VALUES[0];
 
-  const sync=()=>{ hidden.value=`${hVal}:${mVal}`; hidden.dispatchEvent(new Event("change")); };
+  const api = { get value(){ return `${hVal}:${mVal}`; } };
+  const sync=()=>{
+    hidden.value=`${hVal}:${mVal}`;
+    /* 휠을 돌릴 때마다 '내가 선택한 시간' 바를 즉시 갱신 */
+    if(typeof renderVehicleAvailability==="function" && $("#vDate").value) renderVehicleAvailability();
+  };
   function bindCol(col, values, isHour){
     let timer=null;
     const applyIdx=(idx, jump)=>{
@@ -1275,7 +1284,8 @@ function setupWheelPicker(wrapId, hiddenId){
   }
   const setH=bindCol(hCol,H_VALUES,true);
   const setM=bindCol(mCol,M_VALUES,false);
-  return { reset(){ setH(0,true); setM(0,true); } };
+  api.reset=()=>{ setH(0,true); setM(0,true); };
+  return api;
 }
 const vStartWheel = setupWheelPicker("vStartWheel","vStart");
 const vEndWheel   = setupWheelPicker("vEndWheel","vEnd");
@@ -1283,7 +1293,7 @@ const timeMin = t => { const [h,m]=String(t||"0:0").split(":").map(Number); retu
 /* 예약을 "절대 분(分)" 구간으로 환산 — 여러 날에 걸친 예약도 비교 가능 */
 function resvRange(item){
   const sd=item.date, ed=item.dateEnd || item.date;
-  const dayNum = d => Math.floor(new Date(d+"T00:00:00").getTime()/86400000);
+  const dayNum = iso => { const [y,mo,dd]=iso.split("-").map(Number); return Math.floor(Date.UTC(y,mo-1,dd)/86400000); };
   const s = dayNum(sd)*1440 + timeMin(item.start);
   const e = dayNum(ed)*1440 + timeMin(item.end);
   return {s, e};
@@ -1303,17 +1313,42 @@ async function findVehicleConflict(sd, ed, start, end){
 async function renderVehicleAvailability(){
   const sd=$("#vDate").value, ed=$("#vDateEnd").value || sd, box=$("#vTimeline");
   if(!sd){ box.innerHTML=""; return; }
-  box.innerHTML=`<p class="vt-empty">예약 현황 확인 중...</p>`;
-  const list=await fetchAllList();
-  const start=$("#vStart").value, end=$("#vEnd").value;
+  /* 예약 목록은 10초간 캐시 재사용 → 휠을 돌릴 때마다 네트워크 요청/깜빡임 방지 */
+  let list;
+  if(_vehicleListCache && Date.now()-_vehicleCacheAt < 10000){
+    list=_vehicleListCache;
+  } else {
+    if(!_vehicleListCache) box.innerHTML=`<p class="vt-empty">예약 현황 확인 중...</p>`;
+    list=await fetchAllList();
+    _vehicleListCache=list; _vehicleCacheAt=Date.now();
+    /* 방금 사이가 다시 바뀌었을 수 있으니 최신 값으로 다시 그림 */
+  }
+  drawVehicleTimeline(list, box);
+}
+function drawVehicleTimeline(list, box){
+  const sd=$("#vDate").value, ed=$("#vDateEnd").value || sd;
+  const start=vStartWheel.value, end=vEndWheel.value;
 
-  /* 표시할 날짜 목록 (시작~종료) */
-  const days=[]; let d=new Date(sd+"T00:00:00"); const last=new Date(ed+"T00:00:00");
-  while(d<=last && days.length<14){ days.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+  /* 표시할 날짜 목록 (시작~종료) — 문자열 기반으로 계산해 시간대 밀림 방지 */
+  const addDays = (isoStr, n) => {
+    const [y,mo,dd]=isoStr.split("-").map(Number);
+    const dt=new Date(Date.UTC(y, mo-1, dd));
+    dt.setUTCDate(dt.getUTCDate()+n);
+    return dt.toISOString().slice(0,10);
+  };
+  const days=[];
+  for(let cur=sd; cur<=ed && days.length<14; cur=addDays(cur,1)) days.push(cur);
 
   const pct = m => (m/1440*100).toFixed(2);
   const dowKo = ["일","월","화","수","목","금","토"];
+  /* ISO 날짜의 요일을 시간대 영향 없이 계산 */
+  const dowOf = iso => { const [y,mo,dd]=iso.split("-").map(Number); return new Date(Date.UTC(y,mo-1,dd)).getUTCDay(); };
   let anyResv=false;
+
+  /* 선택한 시간 유효성 판단 */
+  const sameDay = sd===ed;
+  const invalidRange = start && end && sameDay && timeMin(end)<=timeMin(start);
+  const hasValidSel = start && end && !invalidRange;
 
   const rows = days.map(day=>{
     /* 이 날짜에 걸치는 모든 예약 → 이 날의 00:00~24:00 기준으로 잘라서 표시 */
@@ -1329,14 +1364,14 @@ async function renderVehicleAvailability(){
 
     /* 내가 지금 선택 중인 구간을 이 날짜에 겹쳐 표시 */
     let sel="";
-    if(start && end){
+    if(hasValidSel){
       const ss = day===sd ? timeMin(start) : 0;
       const ee = day===ed ? timeMin(end) : 1440;
       const within = day>=sd && day<=ed;
-      if(within && ee>ss) sel=`<div class="vt-sel" style="left:${pct(ss)}%;width:${pct(ee-ss)}%;"></div>`;
+      if(within && ee>ss) sel=`<div class="vt-sel" style="left:${pct(ss)}%;width:${pct(ee-ss)}%;"><span>${esc(start)}~${esc(end)}</span></div>`;
     }
-    const dObj=new Date(day+"T00:00:00");
-    const label = days.length>1 ? `<div class="vt-daylabel">${dObj.getMonth()+1}/${dObj.getDate()}(${dowKo[dObj.getDay()]})</div>` : "";
+    const [,mo,dd]=day.split("-").map(Number);
+    const label = days.length>1 ? `<div class="vt-daylabel">${mo}/${dd}(${dowKo[dowOf(day)]})</div>` : "";
     return `${label}<div class="vt-bar">${segs}${sel}</div>`;
   }).join("");
 
@@ -1345,12 +1380,12 @@ async function renderVehicleAvailability(){
     <div class="vt-ticks"><span>00시</span><span>06시</span><span>12시</span><span>18시</span><span>24시</span></div>
     <div class="vt-legend">
       <span><i style="background:rgba(248,113,113,.6);"></i>예약된 시간</span>
-      ${(start&&end)?`<span><i style="background:rgba(255,176,32,.6);"></i>내가 선택한 시간</span>`:""}
+      ${hasValidSel?`<span><i style="background:rgba(255,176,32,.6);"></i>내가 선택한 시간</span>`:""}
     </div>
+    ${invalidRange?`<p class="vt-warn">⚠️ 종료 시간이 시작 시간보다 빨라요. 하루 예약이면 종료 시간을 시작보다 늦게 맞춰주세요.</p>`:""}
     ${anyResv?"":`<p class="vt-empty">📅 선택한 기간에는 아직 예약이 없어요</p>`}`;
 }
-$("#vStart").addEventListener("change", renderVehicleAvailability);
-$("#vEnd").addEventListener("change", renderVehicleAvailability);
+/* 시간 휠은 sync()에서 직접 갱신하므로 별도 리스너 불필요. 종료 날짜만 감지 */
 $("#vDateEnd").addEventListener("change", renderVehicleAvailability);
 
 setType("facility");
@@ -1494,7 +1529,7 @@ async function submitComplaint(){
     c.item={kind:selBusTypes.join(", "), route:$("#busRoute").value.trim()};
   }
   else if(selType==="vehicle"){
-    const date=$("#vDate").value, dateEnd=$("#vDateEnd").value||date, start=$("#vStart").value, end=$("#vEnd").value;
+    const date=$("#vDate").value, dateEnd=$("#vDateEnd").value||date, start=vStartWheel.value, end=vEndWheel.value;
     if(!date) return toast("시작 날짜를 선택해 주세요");
     if(!dateEnd) return toast("종료 날짜를 선택해 주세요");
     if(dateEnd < date) return toast("종료 날짜는 시작 날짜보다 빠를 수 없어요");
@@ -1541,7 +1576,7 @@ async function submitComplaint(){
   $("#busRoute").value="";
   $("#lkNumber").value=""; $("#lkRoom").value="";
   $("#sSize").value=""; $("#sQty").value="";
-  $("#vDate").value=""; $("#vDateEnd").value=""; vStartWheel.reset(); vEndWheel.reset(); $("#vTimeline").innerHTML="";
+  $("#vDate").value=""; $("#vDateEnd").value=""; vStartWheel.reset(); vEndWheel.reset(); $("#vTimeline").innerHTML=""; _vehicleListCache=null;
   $$("#catGrid .cat-btn,#busTypeChips .chip,#uKindGrid .kind-btn,#shoeGrid .shoe-btn,#lkTypeChips .cat-btn,#vPurposeChips .chip").forEach(x=>x.classList.remove("on"));
   selCats=[]; selBusTypes=[]; selUKinds=[]; uKindValues={}; selShoe=null; selLockerTypes=[]; selVPurpose=null; photos=[]; renderPhotos();
   renderUDetailList();

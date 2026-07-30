@@ -300,6 +300,18 @@ input[type="date"]::-webkit-date-and-time-value{text-align:center;margin:0;}
 .hm-meal li::before{content:"·";position:absolute;left:2px;color:var(--dim);font-weight:900;}
 .hm-meal .hm-plus{margin-top:7px;padding-top:6px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--dim);}
 .hm-empty{font-size:13px;color:var(--dim);padding:6px 0;}
+/* 앱 설치 안내 */
+.install-card{border-color:rgba(255,176,32,.4);background:linear-gradient(180deg,rgba(255,176,32,.06),transparent 70%);}
+.install-row{display:flex;align-items:center;gap:12px;}
+.install-txt{flex:1;min-width:0;}
+.install-txt b{display:block;font-size:14.5px;font-weight:800;}
+.install-txt span{display:block;font-size:12px;color:var(--dim);margin-top:2px;line-height:1.45;}
+.install-btn{flex:0 0 auto;width:auto;padding:11px 18px;font-size:13.5px;}
+.ios-guide{margin-top:14px;padding-top:13px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:9px;}
+.ig-step{display:flex;align-items:center;gap:9px;font-size:13px;line-height:1.4;}
+.ig-num{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--amber);color:#1a1a1a;
+  font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.ig-ico{color:var(--blue);font-weight:700;}
 /* 관리자 식단 미리보기 */
 .mp-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px;}
 .mp-table{border-collapse:separate;border-spacing:6px;min-width:760px;}
@@ -583,6 +595,22 @@ input[type="date"]::-webkit-date-and-time-value{text-align:center;margin:0;}
     <div class="hero-actions">
       <button class="btn btn-amber" onclick="go('submit')">📋 통합접수하기</button>
       <button class="btn btn-ghost" onclick="go('track')">🔍 내 접수내역 조회</button>
+    </div>
+  </div>
+
+  <!-- 앱 설치 안내 (홈 화면 추가 안 한 사람에게만 표시) -->
+  <div class="card install-card" id="installCard" style="display:none;">
+    <div class="install-row">
+      <div class="install-txt">
+        <b>📲 앱처럼 사용하기</b>
+        <span id="installSub">홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요</span>
+      </div>
+      <button class="btn btn-amber install-btn" id="installBtn" onclick="handleInstallClick()">설치하기</button>
+    </div>
+    <div id="iosGuide" class="ios-guide" style="display:none;">
+      <div class="ig-step"><span class="ig-num">1</span> 하단 <b>공유 버튼</b> <span class="ig-ico">􀈂</span>(⬆️)을 누르세요</div>
+      <div class="ig-step"><span class="ig-num">2</span> 아래로 내려 <b>‘홈 화면에 추가’</b>를 누르세요</div>
+      <div class="ig-step"><span class="ig-num">3</span> 우측 상단 <b>‘추가’</b>를 누르면 끝!</div>
     </div>
   </div>
 
@@ -971,7 +999,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbx4X-O96ICLrA80m4XqErJdrdMyRCo5xIELWYEbY8TZmh7Ta-0Wi4LY9RWe2K3FKHPL/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzu2Hb_17pz9U-UGmtv-oiIkUDxqZQojO5Q5uVlG6WrGq2Ze8N0HkW-J9QlRWIB4amFWA/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -2681,8 +2709,73 @@ function seedDemo(){
   DB.save(list); renderAdmin(); toast("데모 데이터 20건 추가 완료 🧪");
 }
 
+/* ================================================================
+   앱 설치 안내 (PWA)
+   ================================================================ */
+let deferredInstallPrompt = null;
+
+/* 이미 홈 화면 앱(standalone)으로 실행 중인지 확인 */
+function isStandalone(){
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+function isIOS(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+
+/* 안드로이드 크롬: 설치 프롬프트를 잡아뒀다가 버튼 클릭 시 사용 */
+window.addEventListener("beforeinstallprompt", e=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  updateInstallCard();
+});
+window.addEventListener("appinstalled", ()=>{
+  deferredInstallPrompt = null;
+  const card=$("#installCard"); if(card) card.style.display="none";
+  toast("앱이 설치되었어요 🎉");
+});
+
+/* 홈 화면에 설치 카드를 보여줄지 결정 */
+function updateInstallCard(){
+  const card=$("#installCard"); if(!card) return;
+  /* 이미 앱으로 실행 중이면 숨김 */
+  if(isStandalone()){ card.style.display="none"; return; }
+
+  if(isIOS()){
+    /* 아이폰: 자동 설치 불가 → 안내 방식 */
+    $("#installSub").textContent="홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요";
+    $("#installBtn").textContent="설치 방법 보기";
+    card.style.display="block";
+  } else if(deferredInstallPrompt){
+    /* 안드로이드 크롬 등: 원터치 설치 가능 */
+    $("#installSub").textContent="버튼 한 번으로 앱처럼 설치할 수 있어요";
+    $("#installBtn").textContent="📲 앱 설치하기";
+    card.style.display="block";
+  } else {
+    /* 설치 프롬프트도 없고 iOS도 아니면 (데스크톱 등) 숨김 */
+    card.style.display="none";
+  }
+}
+
+async function handleInstallClick(){
+  if(isIOS()){
+    /* 아이폰: 단계별 안내 토글 */
+    const g=$("#iosGuide");
+    g.style.display = g.style.display==="none" ? "flex" : "none";
+    return;
+  }
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if(outcome==="accepted"){ $("#installCard").style.display="none"; }
+    deferredInstallPrompt = null;
+  } else {
+    toast("브라우저 메뉴에서 '홈 화면에 추가'를 눌러주세요");
+  }
+}
+
 /* 시작 */
 go("home");
+updateInstallCard();
 </script>
 </body>
 </html>

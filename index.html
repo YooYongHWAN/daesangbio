@@ -50,6 +50,7 @@ body{
   font-family:'Noto Sans KR',sans-serif;line-height:1.6;
   word-break:keep-all;overflow-wrap:anywhere;
   padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  min-height:100vh; min-height:100dvh; /* 내용이 짧은 화면(예: 커뮤니티 빈 목록)에서 하단 탭이 붕 뜨는 사파리 버그 방지 */
 }
 .num{font-family:'Barlow Semi Condensed','Noto Sans KR',sans-serif;}
 button{font-family:inherit;cursor:pointer;}
@@ -312,6 +313,22 @@ input[type="date"]::-webkit-date-and-time-value{text-align:center;margin:0;}
 .ig-num{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--amber);color:#1a1a1a;
   font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
 .ig-ico{color:var(--blue);font-weight:700;}
+/* 통계 - 분류별 TOP3 게이지 */
+.cat-top3{margin-top:16px;display:flex;flex-direction:column;gap:12px;}
+.ct3-row{display:flex;flex-direction:column;gap:5px;}
+.ct3-top{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+.ct3-rank{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  border-radius:50%;background:var(--panel);color:var(--dim);font-size:10.5px;font-weight:800;margin-right:6px;}
+.ct3-row:nth-child(1) .ct3-rank{background:rgba(255,176,32,.2);color:var(--amber);}
+.ct3-row:nth-child(2) .ct3-rank{background:rgba(91,163,245,.2);color:var(--blue);}
+.ct3-row:nth-child(3) .ct3-rank{background:rgba(167,139,250,.2);color:var(--violet);}
+.ct3-name{font-weight:700;}
+.ct3-pct{font-weight:800;color:var(--amber);font-variant-numeric:tabular-nums;}
+.ct3-cnt{color:var(--dim);font-weight:600;font-size:11.5px;margin-left:4px;}
+.ct3-bar{height:7px;border-radius:100px;background:var(--panel);overflow:hidden;}
+.ct3-bar-fill{height:100%;border-radius:100px;background:var(--amber);transition:width .6s ease;}
+.ct3-row:nth-child(2) .ct3-bar-fill{background:var(--blue);}
+.ct3-row:nth-child(3) .ct3-bar-fill{background:var(--violet);}
 /* 관리자 식단 미리보기 */
 .mp-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px;}
 .mp-table{border-collapse:separate;border-spacing:6px;min-width:760px;}
@@ -838,7 +855,7 @@ input[type="date"]::-webkit-date-and-time-value{text-align:center;margin:0;}
   <p class="page-sub" id="statsMonthLabel"></p>
   <div class="kpi-grid" id="statsKpi"></div>
   <div class="card chart-card"><h3>📈 월별 접수 추이</h3><canvas id="chMonthly"></canvas></div>
-  <div class="card chart-card"><h3>🧩 분류별 접수 비율</h3><canvas id="chCategory"></canvas></div>
+  <div class="card chart-card"><h3>🧩 분류별 접수 비율</h3><canvas id="chCategory"></canvas><div id="catTop3" class="cat-top3"></div></div>
 </section>
 
 <!-- ===== 관리자 ===== -->
@@ -999,7 +1016,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbzHAXpcZbn-54QnSaXsuFrDOTiiOMb341Nqg1qDTfIuMUQ9Qena76y6gaNN19WLmTpH0w/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbxowzcH1eXdTyxoE5R4dtZQzLAoH8XaHhmUdnHod-CNKg8I0dD7S0UyeX2ZiwB9HHTvlg/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -1218,7 +1235,7 @@ function go(v){
   window.scrollTo({top:0});
   if(v==="home") renderHome();
   if(v==="community") renderCommunity();
-  if(v==="menu") renderMenu();
+  if(v==="menu") renderMenu(true);
   if(v==="track") renderMyList();
   if(v==="stats") renderStats();
   if(v==="admin"){
@@ -1860,13 +1877,26 @@ async function renderStats(){
     {label:"접수",data:recv,backgroundColor:"#5ba3f5",borderRadius:6},
     {label:"완료",data:done,backgroundColor:"#34d399",borderRadius:6}]},options:gopt});
 
-  /* 분류별 */
+  /* 분류별 — 건수 많은 순으로 정렬 */
   const catCnt={}; list.forEach(c=>catCnt[c.category]=(catCnt[c.category]||0)+1);
-  const ck=Object.keys(catCnt);
+  const ck=Object.keys(catCnt).sort((a,b)=>catCnt[b]-catCnt[a]);
+  const catTotal=ck.reduce((a,k)=>a+catCnt[k],0);
   charts.c=new Chart($("#chCategory"),{type:"doughnut",
     data:{labels:ck,datasets:[{data:ck.map(k=>catCnt[k]),
       backgroundColor:["#ffb020","#5ba3f5","#a78bfa","#34d399","#f87171","#fbbf24","#38bdf8","#fb923c","#4ade80","#e879f9","#94a3b8","#f472b6"],borderWidth:0}]},
     options:{responsive:true,plugins:{legend:{position:"right",labels:{color:"#8d9ab4",boxWidth:12,font:{family:"'Noto Sans KR'",size:11}}}}}});
+
+  /* 상위 3개 — 숫자 % 게이지로 별도 표시 */
+  $("#catTop3").innerHTML = ck.slice(0,3).map((k,i)=>{
+    const cnt=catCnt[k], pct = catTotal? Math.round(cnt/catTotal*100) : 0;
+    return `<div class="ct3-row">
+      <div class="ct3-top">
+        <span class="ct3-name"><span class="ct3-rank">${i+1}</span>${esc(k)}</span>
+        <span><span class="ct3-pct">${pct}%</span><span class="ct3-cnt">(${cnt}건)</span></span>
+      </div>
+      <div class="ct3-bar"><div class="ct3-bar-fill" style="width:${pct}%;"></div></div>
+    </div>`;
+  }).join("");
 }
 
 /* ================================================================
@@ -2461,12 +2491,18 @@ function todayIdxOf(menu){
   const i=menu.dates.findIndex(d=>+dISO(d)===+t);
   return i;
 }
+/* 캐시된 식단이 이번 주 것이 맞는지 확인하고, 없으면 새로 불러옴 (menuDayIdx는 건드리지 않음) */
+async function ensureMenuLoaded(){
+  if(menuData && todayIdxOf(menuData)<0) menuData=null; // 주가 바뀌면 다시 불러오기
+  if(!menuData) menuData = await loadMenu();
+  return menuData;
+}
 /* 홈 화면 - 오늘 하루 식단만 2x2 타일로 간결하게 */
 async function renderHomeMenu(){
   const box=$("#homeMenu");
   if(!box) return;
   box.innerHTML=`<p class="hm-empty">불러오는 중...</p>`;
-  if(!menuData || todayIdxOf(menuData)<0){ menuData = await loadMenu(); }
+  await ensureMenuLoaded();
   if(!menuData){
     box.innerHTML=`<p class="hm-empty">아직 등록된 식단표가 없어요.</p>`;
     return;
@@ -2500,21 +2536,21 @@ async function renderHomeMenu(){
           </div>`).join("") + `</div>`
       : `<p class="hm-empty">오늘은 등록된 메뉴가 없어요.</p>`);
 }
-async function renderMenu(){
+/* forceToday=true면 오늘 날짜 탭으로 강제 이동 (탭을 새로 열 때), 요일칩 클릭 시엔 false로 호출해 선택 유지 */
+async function renderMenu(forceToday){
   const body=$("#menuBody"), chips=$("#menuDayChips");
-  /* 캐시된 식단이 이번 주가 아니면 다시 불러오기 */
-  if(menuData && todayIdxOf(menuData)<0) menuData=null;
-  if(!menuData){
-    $("#menuWeekLabel").textContent="불러오는 중...";
-    menuData = await loadMenu();
-    const ti = menuData ? todayIdxOf(menuData) : -1;
-    menuDayIdx = ti>-1 ? ti : 0;
-  }
+  if(!menuData) $("#menuWeekLabel").textContent="불러오는 중...";
+  await ensureMenuLoaded();
   if(!menuData){
     $("#menuWeekLabel").textContent="";
     chips.innerHTML="";
     body.innerHTML=`<div class="card"><p class="empty">아직 등록된 식단표가 없어요.<br>관리자 화면에서 엑셀 파일을 올려주세요.</p></div>`;
     return;
+  }
+  /* 탭을 새로 열 때만 오늘 날짜로 강제 이동. 요일칩 클릭 시엔 사용자가 고른 날짜를 유지 */
+  if(forceToday){
+    const ti=todayIdxOf(menuData);
+    menuDayIdx = ti>-1 ? ti : 0;
   }
   const m=menuData, todayI=todayIdxOf(m);
   const f=s=>{ const d=dISO(s); return `${d.getMonth()+1}/${d.getDate()}`; };

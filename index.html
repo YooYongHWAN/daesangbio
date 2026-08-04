@@ -1016,7 +1016,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbxowzcH1eXdTyxoE5R4dtZQzLAoH8XaHhmUdnHod-CNKg8I0dD7S0UyeX2ZiwB9HHTvlg/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbyTblPAMVw6dXUXmDh8WhbMGYYO0SNrNSivX_k8cEJ8eH4qDzQ5NJS7V7AUO9-SjqSu/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -1178,6 +1178,13 @@ function esc(s){
   return String(s??"").replace(/[&<>"']/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove("show"),2200); }
+/* 구글 드라이브 "보기" 페이지 링크(.../file/d/ID/view)는 <img>로 못 씀 → 실제 이미지가 나오는 썸네일 링크로 변환.
+   base64(data:) 이미지나 이미 변환된 링크는 그대로 둠. */
+function driveImgUrl(url){
+  if(!url) return url;
+  const m = url.match(/\/file\/d\/([^/]+)/) || url.match(/[?&]id=([^&]+)/);
+  return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1600` : url;
+}
 function fmtDate(iso){ const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
 function locStr(c){
   const t=c.type||"facility";
@@ -1804,7 +1811,7 @@ function renderResultBox(c){
   return `<div class="result-box">
     <h4>✅ 처리 완료 (${c.completedAt?fmtDate(c.completedAt):""})</h4>
     ${c.resultNote?`<div>${esc(c.resultNote)}</div>`:`<div>처리가 완료되었습니다.</div>`}
-    ${c.resultPhoto?`<img src="${c.resultPhoto}">`:""}
+    ${c.resultPhoto?`<img src="${driveImgUrl(c.resultPhoto)}">`:""}
     ${c.rating===null?`
       <div style="margin-top:12px;font-size:12.5px;color:var(--dim);">처리 결과는 만족스러우셨나요?</div>
       <div class="stars" data-id="${c.id}">
@@ -1978,7 +1985,7 @@ function openAdm(id){
       <div class="drow"><b>접수자</b><div>${esc(c.contact)||"-"}</div></div>
       ${c.content?`<div class="drow"><b>내용</b><div>${esc(c.content)}</div></div>`:""}
     </div>
-    ${c.photos.length?`<div class="photo-previews" style="margin-top:12px;">${c.photos.map(p=>`<div class="pp"><img src="${p}" onclick="window.open('').document.write('<img src=${p} style=max-width:100%>')"></div>`).join("")}</div>`:""}
+    ${c.photos.length?`<div class="photo-previews" style="margin-top:12px;">${c.photos.map(p=>`<div class="pp"><img src="${driveImgUrl(p)}" onclick="window.open('${driveImgUrl(p)}','_blank')"></div>`).join("")}</div>`:""}
 
     <div class="field" style="margin-top:18px;"><label>처리 상태</label>
       <div class="status-btns">
@@ -1992,7 +1999,7 @@ function openAdm(id){
       <textarea id="admNote" placeholder="예: 잠금장치 교체 완료했습니다.">${esc(c.resultNote)}</textarea>
     </div>
     <div class="field"><label>완료 사진</label>
-      ${c.resultPhoto?`<img src="${c.resultPhoto}" style="max-width:130px;border-radius:10px;display:block;margin-bottom:8px;">`:""}
+      ${c.resultPhoto?`<img src="${driveImgUrl(c.resultPhoto)}" style="max-width:130px;border-radius:10px;display:block;margin-bottom:8px;">`:""}
       <input type="file" id="admPhoto" accept="image/*" style="padding:9px;">
     </div>
     <div class="row2">

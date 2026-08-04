@@ -1016,7 +1016,7 @@ const CONFIG = {
   appName: "임직원 통합 접수창구",
   // 구글시트 연동 웹앱 URL. 배포 후 이 자리에 https://script.google.com/macros/s/..../exec 를 넣으면
   // 접수·조회·관리자 기능이 전부 구글시트와 연동됩니다. 비워두면 이 기기의 LocalStorage만 사용합니다.
-  apiUrl: "https://script.google.com/macros/s/AKfycbyTblPAMVw6dXUXmDh8WhbMGYYO0SNrNSivX_k8cEJ8eH4qDzQ5NJS7V7AUO9-SjqSu/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbwX_9uJfv045G1DB7A4rlDv9-26izsrCLUYDoKXcszLvRHWUESxrYRiCbdvYxZLpUAxQg/exec",
   adminDefaultPw: "change-this-local-pw",    // ⚠️ 구글시트(apiUrl) 연동 중에는 이 값이 전혀 사용되지 않고, 서버(Apps Script)의 ADMIN_PASSWORD가 기준이 됩니다.
                                               // apiUrl 없이 이 기기에서만 테스트할 때만 쓰이는 값이라, 실제 비밀번호를 여기 적어두지 마세요 (소스는 누구나 볼 수 있어요).
   notice: "🔧 시설 불편사항은 이 페이지로 접수해 주세요. 처리 결과는 카카오 채널로도 공지됩니다.",
@@ -1256,15 +1256,33 @@ $$("#botNav button, #deskNav button").forEach(b=>b.addEventListener("click",()=>
    홈
    ================================================================ */
 /* API 연동 시 공개 데이터(연락처·원본사진 제외)를, 미연동 시 로컬 데이터를 반환 */
-async function fetchAllList(){
-  if(API.on()){
-    try{ const r=await API.get({action:"public"}); return r.result==="success" ? r.items : []; }
-    catch(err){ return []; }
-  }
-  return DB.load();
+let _allListCache=null, _allListCacheAt=0, _allListInFlight=null;
+async function fetchAllList(force){
+  /* 15초 이내 재요청은 캐시 재사용 — 탭을 빠르게 왔다갔다 해도 매번 새로 안 불러옴 */
+  if(!force && _allListCache && Date.now()-_allListCacheAt < 15000) return _allListCache;
+  /* 이미 요청이 진행 중이면 그 결과를 같이 기다림 (동시에 여러 번 쏘지 않도록) */
+  if(_allListInFlight) return _allListInFlight;
+  _allListInFlight = (async()=>{
+    let items;
+    if(API.on()){
+      try{ const r=await API.get({action:"public"}); items = r.result==="success" ? r.items : []; }
+      catch(err){ items = []; }
+    } else {
+      items = DB.load();
+    }
+    _allListCache = items; _allListCacheAt = Date.now();
+    _allListInFlight = null;
+    return items;
+  })();
+  return _allListInFlight;
 }
 
 async function renderHome(){
+  /* 접수 목록/공지/식단을 동시에 요청 — 하나씩 기다리지 않고 병렬로 불러와야 빠름 */
+  $("#homeNotice").innerHTML=`<p class="ntc-empty">불러오는 중...</p>`;
+  loadNotices().then(ns=>{ noticeData=ns; renderHomeNotices(); bindVoteButtons(); });
+  renderHomeMenu();
+
   const list=await fetchAllList();
   const now=new Date(), m=now.getMonth(), y=now.getFullYear();
   const month=list.filter(c=>{ const d=new Date(c.createdAt); return d.getMonth()===m && d.getFullYear()===y; });
@@ -1274,12 +1292,6 @@ async function renderHome(){
     <div class="kpi k-green"><b class="num">${month.filter(c=>c.status===3).length}</b><span>이번달 완료</span></div>
     <div class="kpi k-yellow"><b class="num">${doing}</b><span>처리중</span></div>
     <div class="kpi k-amber"><b class="num">${fmtAvg(avgHours(list))}</b><span>평균 처리시간</span></div>`;
-  /* 최신 공지 3개 (커뮤니티 연동) */
-  $("#homeNotice").innerHTML=`<p class="ntc-empty">불러오는 중...</p>`;
-  loadNotices().then(ns=>{ noticeData=ns; renderHomeNotices(); bindVoteButtons(); });
-
-  /* 오늘의 식단 */
-  renderHomeMenu();
 
   const recent=[...list].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,6);
   $("#homeFeed").innerHTML = recent.length ? recent.map(c=>`
@@ -1482,7 +1494,7 @@ function resvRange(item){
 /* 겹치는 기존 예약이 있는지 확인 (여러 날 예약 포함) */
 async function findVehicleConflict(sd, ed, start, end){
   if(!sd || !ed || !start || !end) return null;
-  const list = await fetchAllList();
+  const list = await fetchAllList(true); /* 예약 충돌 검사는 반드시 최신 데이터로 확인 */
   const me = resvRange({date:sd, dateEnd:ed, start, end});
   return list.find(c=>{
     if(c.type!=="vehicle" || !c.item) return false;
@@ -1748,6 +1760,7 @@ async function submitComplaint(){
     catch(e){ btn.disabled=false; btn.textContent="✅ 접수하기"; return toast("저장공간이 가득 찼어요. 사진 수를 줄여주세요"); }
   }
   DB.addMine(c.id);
+  _allListCache=null; /* 방금 접수한 내역이 홈/피드에 바로 반영되도록 캐시 비움 */
   btn.disabled=false; btn.textContent="✅ 접수하기";
 
   /* 폼 초기화 */
@@ -2027,6 +2040,7 @@ async function admStatus(id,st){
     try{
       const r=await API.post({action:"updateStatus", token:adminToken, id, status:st});
       if(r.result!=="success") throw new Error(r.message||"실패");
+      _allListCache=null; /* 홈/조회 화면에도 최신 상태가 반영되도록 */
     }catch(err){
       /* 실패 시 원래 상태로 되돌리기 */
       item.status=prevStatus; item.completedAt=prevCompleted;
@@ -2054,6 +2068,7 @@ async function admSave(id){
       if(resultPhoto) payload.resultPhoto=resultPhoto;
       const r=await API.post(payload);
       if(r.result!=="success") throw new Error(r.message||"실패");
+      _allListCache=null;
       toast("저장했어요 💾");
     }catch(err){ return toast("저장에 실패했어요"); }
   } else {
@@ -2087,15 +2102,28 @@ let noticeData = null;   // 화면에 표시 중인 공지 목록(배열)
 function getVoted(){ try{ return JSON.parse(localStorage.getItem(VOTED_KEY)||"{}"); }catch(e){ return {}; } }
 function setVoted(map){ localStorage.setItem(VOTED_KEY, JSON.stringify(map)); }
 
-async function loadNotices(){
-  if(API.on()){
-    try{
-      const r = await API.get({action:"getNotices"});
-      if(r.result==="success" && Array.isArray(r.notices)) return r.notices;
-    }catch(e){ /* 실패 시 로컬 폴백 */ }
-  }
-  try{ return JSON.parse(localStorage.getItem(NOTICE_KEY)||"[]"); }
-  catch(e){ return []; }
+let _noticesCache=null, _noticesCacheAt=0, _noticesInFlight=null;
+async function loadNotices(force){
+  /* 15초 이내 재요청은 캐시 재사용 (홈↔커뮤니티 빠르게 왔다갔다 해도 매번 안 불러옴) */
+  if(!force && _noticesCache && Date.now()-_noticesCacheAt < 15000) return _noticesCache;
+  if(_noticesInFlight) return _noticesInFlight;
+  _noticesInFlight = (async()=>{
+    let items;
+    if(API.on()){
+      try{
+        const r = await API.get({action:"getNotices"});
+        items = (r.result==="success" && Array.isArray(r.notices)) ? r.notices : null;
+      }catch(e){ items=null; }
+    }
+    if(items===null || items===undefined){
+      try{ items = JSON.parse(localStorage.getItem(NOTICE_KEY)||"[]"); }
+      catch(e){ items = []; }
+    }
+    _noticesCache=items; _noticesCacheAt=Date.now();
+    _noticesInFlight=null;
+    return items;
+  })();
+  return _noticesInFlight;
 }
 async function saveNotices(list){
   localStorage.setItem(NOTICE_KEY, JSON.stringify(list));
@@ -2103,6 +2131,7 @@ async function saveNotices(list){
     const r = await API.post({action:"saveNotices", token:adminToken, notices:list});
     if(r.result!=="success") throw new Error(r.message||"저장 실패");
   }
+  _noticesCache=null; /* 저장 직후엔 캐시 비워서 다음 조회가 최신 반영 */
 }
 
 /* 공지 정렬: 필독(고정) 우선 → 최신순 */
@@ -2211,9 +2240,12 @@ async function castVote(noticeId, optIdx){
       const r=await API.post({action:"submitVote", noticeId, option:optIdx, voter});
       if(r.result==="duplicate"){ toast("이미 투표한 사번이에요"); }
       else if(r.result!=="success"){ throw new Error(r.message||"실패"); }
-      else if(r.notice && r.notice.vote){ /* 서버가 최신 집계를 돌려주면 반영 */
-        const idx=noticeData.findIndex(x=>x.id===noticeId);
-        if(idx>-1){ noticeData[idx].vote=r.notice.vote; rerenderVoteViews(); }
+      else {
+        _noticesCache=null; /* 방금 투표한 최신 집계가 다음 조회에 반영되도록 */
+        if(r.notice && r.notice.vote){ /* 서버가 최신 집계를 돌려주면 반영 */
+          const idx=noticeData.findIndex(x=>x.id===noticeId);
+          if(idx>-1){ noticeData[idx].vote=r.notice.vote; rerenderVoteViews(); }
+        }
       }
     }catch(err){
       /* 실패 시 로컬 롤백 */
